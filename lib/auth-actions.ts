@@ -216,7 +216,8 @@ export async function verifyOtpAction(challengeId: string, otp: string): Promise
   return {
     success: true,
     status: "SUCCESS",
-    redirectTo: "/dashboard"
+    redirectTo: "/dashboard",
+    message: "Connexion réussie."
   };
 }
 
@@ -302,7 +303,8 @@ export async function googleCallbackAction(idToken: string): Promise<AuthVerifyR
   return {
     success: true,
     status: "SUCCESS",
-    redirectTo: "/dashboard"
+    redirectTo: "/dashboard",
+    message: "Connexion Google réussie."
   };
 }
 
@@ -342,7 +344,8 @@ export async function verify2FaAction(challengeId: string, code: string, type: "
   return {
     success: true,
     status: "SUCCESS",
-    redirectTo: "/dashboard"
+    redirectTo: "/dashboard",
+    message: "Double facteur validé."
   };
 }
 
@@ -386,7 +389,8 @@ export async function confirm2FASetupAction(code: string): Promise<AuthVerifyRes
   return {
     success: true,
     status: "SUCCESS",
-    redirectTo: "/dashboard"
+    redirectTo: "/dashboard",
+    message: "Configuration de la 2FA réussie."
   };
 }
 

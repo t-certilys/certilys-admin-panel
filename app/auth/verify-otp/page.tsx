@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import VerifyOTP from "@/components/certilys-ui/authentication/verify-otp";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function VerifyOTPPage() {
-  return <VerifyOTP />;
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground animate-pulse">Chargement de la page de vérification...</div>}>
+      <VerifyOTP />
+    </Suspense>
+  );
 }

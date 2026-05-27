@@ -152,27 +152,13 @@ export default function InvitationConfirmation() {
 
             <p className="text-gray-400 text-sm">{error}</p>
 
-            <div className="space-y-2 max-w-xs mx-auto">
+            <div className="max-w-xs mx-auto">
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-sm font-semibold"
                 onClick={() => router.push("/auth/login")}
               >
                 Retour à la connexion
               </Button>
-
-              <select
-                onChange={(e) => {
-                  if (e.target.value) fetchDetails(e.target.value);
-                }}
-                className="w-full text-xs bg-zinc-900 border border-zinc-800 text-zinc-400 p-2 rounded-lg cursor-pointer outline-none mt-2"
-              >
-                <option value="">-- Tester d'autres jetons --</option>
-                <option value="token_valid">Jeton Valide</option>
-                <option value="token_expired">Invitation Expirée</option>
-                <option value="token_already_accepted">Déjà Acceptée</option>
-                <option value="token_rejected">Invitation Rejetée</option>
-                <option value="token_unknown">Jeton Inexistant</option>
-              </select>
             </div>
           </div>
         </div>

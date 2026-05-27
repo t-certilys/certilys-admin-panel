@@ -1,0 +1,116 @@
+﻿.auth-pattern {
+  background-color: var(--accent);
+  background-image: url(/images/patterns/brick-wall-dark.png);
+}
+
+/* ── Racine et conteneur de la sidebar : aucun fond ni ombre double ── */
+[data-slot=sidebar] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-slot=sidebar-inner] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Le panneau texturé unique ── */
+.sidebar-pattern {
+  background-color: var(--secondary) !important;
+  background-image: url(/images/patterns/black-orchid.png) !important;
+  background-repeat: repeat !important;
+  background-size: auto !important;
+  color: var(--secondary-foreground) !important;
+}
+
+/* Labels de groupe : discrets, sans fond ni border */
+.sidebar-pattern [data-sidebar=group-label] {
+  color: rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
+  border: none !important;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+/* Textes muted sur fond sombre */
+.sidebar-pattern .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Badge de notification */
+.sidebar-pattern [data-sidebar=menu-badge] {
+  color: var(--primary-foreground) !important;
+  background-color: var(--primary) !important;
+  border: none !important;
+}
+
+/* Items de navigation: etat par defaut */
+.sidebar-pattern [data-sidebar=menu-button] {
+  color: rgba(255, 255, 255, 0.8) !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Items de navigation: hover */
+.sidebar-pattern [data-sidebar=menu-button]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  border: none !important;
+}
+
+/* Items de navigation: focus clavier */
+.sidebar-pattern [data-sidebar=menu-button]:focus-visible {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  border: none !important;
+  outline: 2px solid rgba(255, 255, 255, 0.35) !important;
+  outline-offset: 2px !important;
+}
+
+/* Items de navigation: actif */
+.sidebar-pattern [data-sidebar=menu-button][data-active=true] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 600 !important;
+  border: none !important;
+}
+
+.sidebar-pattern [data-sidebar=menu-button][data-active=true] svg {
+  color: var(--primary-foreground) !important;
+}
+
+/* SVG icones: etat par defaut */
+.sidebar-pattern [data-sidebar=menu-button] svg {
+  color: rgba(255, 255, 255, 0.65) !important;
+  transition: color 0.15s ease;
+}
+
+.sidebar-pattern [data-sidebar=menu-button]:hover svg,
+.sidebar-pattern [data-sidebar=menu-button]:focus-visible svg {
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* Boutons ghost: sans border */
+.sidebar-pattern button {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sidebar-pattern button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  border: none !important;
+}
+
+/* Separateurs */
+.sidebar-pattern [data-sidebar=separator] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}

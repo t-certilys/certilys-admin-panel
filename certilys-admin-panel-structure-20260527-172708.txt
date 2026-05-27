@@ -1,13 +1,19 @@
 ﻿certilys-admin-panel
-Generated : 2026-05-27 12:08:56
+Generated : 2026-05-27 17:27:08
 Root      : C:\Users\HP\Desktop\mes-dossiers\dev-workspace\_local-projects\_leonardo\certilys\certilys-admin-panel
-Files     : 154
+Files     : 163
 ================================================================================
 
 .
 |-- app
 |   |-- auth
+|   |   |-- 2fa
+|   |   |   |-- setup
+|   |   |   |   +-- page.tsx
+|   |   |   +-- page.tsx
 |   |   |-- forgot-password
+|   |   |   +-- page.tsx
+|   |   |-- invitation
 |   |   |   +-- page.tsx
 |   |   |-- login
 |   |   |   +-- page.tsx
@@ -16,6 +22,8 @@ Files     : 154
 |   |   +-- verify-otp
 |   |       +-- page.tsx
 |   |-- dashboard
+|   |   |-- courses-db
+|   |   |   +-- page.tsx
 |   |   |-- help
 |   |   |   +-- page.tsx
 |   |   |-- recipes-db
@@ -55,6 +63,8 @@ Files     : 154
 |   |   |   |-- login-form.tsx
 |   |   |   |-- reset-password.tsx
 |   |   |   |-- reset-password-form.tsx
+|   |   |   |-- two-factor-form.tsx
+|   |   |   |-- two-factor-setup-form.tsx
 |   |   |   |-- verify-otp.tsx
 |   |   |   +-- verify-otp-form.tsx
 |   |   |-- dashboard
@@ -79,7 +89,8 @@ Files     : 154
 |   |   |-- bento-grid.tsx
 |   |   +-- logo.tsx
 |   |-- icons
-|   |   +-- cty-i.tsx
+|   |   |-- cty-i.tsx
+|   |   +-- google.tsx
 |   |-- layout
 |   |   |-- app-sidebar.tsx
 |   |   |-- bottom-drawer.tsx
@@ -171,7 +182,8 @@ Files     : 154
 |       |-- avatars
 |       |   +-- murgo_02.jpg
 |       |-- icons
-|       |   +-- cty-i.svg
+|       |   |-- cty-i.svg
+|       |   +-- google.svg
 |       |-- illustrations
 |       |   |-- connecting-teams_nnjy.svg
 |       |   +-- Invite-cuate.svg
@@ -184,6 +196,7 @@ Files     : 154
 |           +-- brick-wall-dark.png
 |-- .gitignore
 |-- AGENTS.md
+|-- certilys-admin-panel-structure-20260527-120856.txt
 |-- CLAUDE.md
 |-- components.json
 |-- eslint.config.mjs

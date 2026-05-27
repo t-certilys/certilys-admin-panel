@@ -1,10 +1,12 @@
 import {
-  ApiIcon,
-  DatabaseIcon,
   DashboardSquare01Icon,
-  HelpCircleIcon,
-  Settings01Icon,
+  DatabaseIcon,
   UserGroupIcon,
+  Settings01Icon,
+  HelpCircleIcon,
+  Notification01Icon,
+  Shield01Icon,
+  InvoiceIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
@@ -13,6 +15,7 @@ export interface DashboardNavItem {
   shortTitle?: string;
   url: string;
   icon: IconSvgElement;
+  badge?: string | number;
 }
 
 export interface DashboardNavGroup {
@@ -21,13 +24,13 @@ export interface DashboardNavGroup {
 }
 
 export const dashboardBrand = {
-  title: "Certilys Dash.",
+  title: "Certilys Admin",
   url: "/dashboard",
 };
 
 export const dashboardNavConfig: DashboardNavGroup[] = [
   {
-    label: "Home",
+    label: "Certilys",
     items: [
       {
         title: "Tableau de bord",
@@ -36,26 +39,50 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         icon: DashboardSquare01Icon,
       },
       {
-        title: "Base des formations",
+        title: "Formations",
         shortTitle: "Formations",
         url: "/dashboard/courses-db",
         icon: DatabaseIcon,
       },
       {
-        title: "Equipes",
-        shortTitle: "Equipes",
+        title: "Formateurs",
+        shortTitle: "Formateurs",
         url: "/dashboard/team",
         icon: UserGroupIcon,
       },
+      {
+        title: "Utilisateurs",
+        shortTitle: "Utilisateurs",
+        url: "/dashboard/users",
+        icon: UserGroupIcon,
+      },
+      {
+        title: "Commandes / Paiements",
+        shortTitle: "Commandes",
+        url: "/dashboard/commandes",
+        icon: InvoiceIcon,
+      },
     ],
   },
-
   {
-    label: "Support",
+    label: "Système & Support",
     items: [
       {
-        title: "Parametres",
-        shortTitle: "Paramètres",
+        title: "Notifications",
+        shortTitle: "Notifs",
+        url: "/dashboard/notifications",
+        icon: Notification01Icon,
+        badge: 3, // Badge dynamique mocké de notifications non-lues
+      },
+      {
+        title: "Logs / Audit",
+        shortTitle: "Audits",
+        url: "/dashboard/logs",
+        icon: Shield01Icon,
+      },
+      {
+        title: "Paramètres",
+        shortTitle: "Réglages",
         url: "/settings",
         icon: Settings01Icon,
       },
@@ -64,12 +91,6 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         shortTitle: "Aide",
         url: "/dashboard/help",
         icon: HelpCircleIcon,
-      },
-      {
-        title: "API",
-        shortTitle: "API",
-        url: "/dashboard/api",
-        icon: ApiIcon,
       },
     ],
   },
