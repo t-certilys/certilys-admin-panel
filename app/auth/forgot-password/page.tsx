@@ -1,5 +1,5 @@
-import ForgotPassword from "@/components/certilys-ui/authentication/forgot-password";
+import { redirect } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-  return <ForgotPassword />;
+  redirect("/auth/login");
 }

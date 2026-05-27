@@ -31,6 +31,20 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Dernières Mises à Jour
 
+- **Authentification Passwordless Exclusive & Sécurité Maximale (Admin)** :
+  - **Suppression intégrale des mots de passe** : Retrait définitif des champs de mot de passe, des confirmations et de tous les écrans associés à la réinitialisation (`forgot-password`, `reset-password` redirigent désormais dynamiquement vers `/auth/login`).
+  - **Parcours exclusivement par Email OTP et Google OAuth** : L'accès repose entièrement sur un code de sécurité à usage unique envoyé par email (OTP) ou via une authentification Google.
+  - **Contrôle d'accès strict par Invitation** : L'inscription libre de nouveaux administrateurs est totalement proscrite. L'accès exige obligatoirement une invitation valide, envoyée par un administrateur existant et expressément acceptée au préalable via la nouvelle route officielle d'invitation `/auth/invitation`.
+  - **Google n'octroie aucun bypass** : Même si l'identité est validée par Google, le backend effectue tous les contrôles rigoureux : email invité, invitation acceptée, rôle `ADMIN`/`MODERATOR` requis, et état de compte actif.
+  - **Double Facteur Obligatoire (2FA)** : Intégration complète de la configuration obligatoire de la 2FA (`/auth/2fa/setup` avec QR Code, clé secrète, validation de code et codes de secours) et de la validation lors de la connexion (`/auth/2fa`).
+  - **Guard Serveur / Layout Impénétrable** : Sécurisation de l'espace `/dashboard` à l'aide d'un Guard côté serveur dans `app/dashboard/layout.tsx`. Il valide instantanément l'absence de session, le rôle, le statut suspendu, l'état de l'invitation et redirige immédiatement vers la 2FA (setup ou vérification) si nécessaire.
+  - **Gestion de tous les États d'Authentification** : Prise en compte de tous les cas d'erreur de manière premium en français (email non invité, invitation expirée/rejetée/non acceptée, compte suspendu, rôle interdit, trop de tentatives, 2FA incorrecte, backup code invalide).
+
+- **Nettoyage de l'ancien Template (Adieu "Recipes")** :
+  - Remplacement et nettoyage complet des anciennes références liées à la "Base des recettes" (recipes database).
+  - La route `/dashboard/recipes-db` et son dossier ont été convertis de façon propre et professionnelle en `/dashboard/courses-db` (la **Base des formations**) pour s'aligner sur le domaine métier Certilys.
+  - Mise à jour du menu de navigation dans `lib/dashboard-nav-config.ts` en utilisant l'icône de base de données `DatabaseIcon` à la place du livre de recettes.
+
 - **Alignement de la Charte Graphique (Thème oklch & Fontes Inter/Sora)** :
   - Intégration de la palette de couleurs moderne définie sous format `oklch` dans le fichier `globals.css` (Background, Primary, Secondary, Accent, Muted, Destructive et Sidebar).
   - Chargement et configuration des Google Fonts **Inter** (pour le texte général) et **Sora** (pour tous les titres h1-h6) via `next/font/google` et injectées dans la balise `<html>`.
@@ -64,7 +78,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 - **Correction de l'Erreur d'Hydration (ThemeToggle)** : Correction de l'erreur d'hydration dans `components/providers/theme-provider.tsx` en rendant l'attribut `disabled` explicite avec `disabled={true}` au lieu de `disabled` seul, garantissant la cohérence entre le rendu serveur et client.
 - **Agrandissement du Logo Sidebar Rétractée** : Augmentation de la taille du logo dans la sidebar rétractée de 38x38 à 52x52 pixels dans `components/layout/app-sidebar.tsx`, et modification du viewBox des fichiers SVG (`anl-vw.svg` et `anl-vb.svg`) de `0 0 1024 1024` à `230 190 580 620` pour supprimer le vide autour du logo et le faire remplir l'espace disponible.
 - **Renommage du CommandPaletteProvider** : Renommage du fichier `components/providers/use-command-palette.tsx` vers `components/providers/command-provider.tsx` pour une meilleure cohérence de nommage. Le `CommandPaletteProvider` gère l'état global des dialogues de recherche et de création rapide, ainsi que le raccourci clavier `Ctrl/Cmd+K` pour ouvrir la recherche globale.
-- **Suppression des Transitions de Thème** : Suppression de l'animation de ripple et de toutes les transitions CSS lors du changement entre mode clair et mode sombre dans `components/layout/theme-toggle.tsx`. Le changement de thème est maintenant immédiat sans effet de transition.
+- **Suppression des Transitions de Thème** : Suppression de l'animation de ripple et de toutes les transitions CSS lors du changement entre mode clair et mode sombre dans `components/layout/theme-toggle.tsx`. Le changement de thème is maintenant immédiat sans effet de transition.
 - **Composant Logo et Branding** : Correction de la logique thématique dans `components/certilys-ui/logo.tsx` (Sombre -> VW/Blanc, Clair -> VB/Noir). Optimisation de la variante `collapsed` (28x28) pour la barre latérale rétractée. Remplacement de l'icône de caméra générique par ce nouveau logo sur toutes les interfaces (Auth, Sidebar, Drawer).
 - **Navigation Mobile et Visibilité** : Déplacement de `BottomNav` et `BottomDrawer` en dehors du `SidebarProvider` dans `DashboardLayout` pour garantir leur visibilité sur mobile. Extension du point d'arrêt de visibilité de la navigation inférieure jusqu'à `lg` pour un support tablette amélioré.
 - **Traduction de l'Interface Utilisateur** : Traduction complète de l'interface utilisateur de l'anglais vers le français. Mise à jour des composants d'authentification (forms de login, forgot password), du dashboard (chart-area-interactive, dashboard-nav-config, section-cards), et de la sidebar (app-sidebar). Adaptation des labels, descriptions, messages et tooltips. Suppression des pages et composants de signup non utilisés. Renommage de la marque "Murgo Dash." vers "Certilys Dash.". Réorganisation des assets d'images (avatars déplacés de public/avatars vers public/images/avatars).

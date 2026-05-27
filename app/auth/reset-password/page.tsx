@@ -1,5 +1,5 @@
-import ResetPassword from "@/components/certilys-ui/authentication/reset-password";
+import { redirect } from "next/navigation";
 
 export default function ResetPasswordPage() {
-  return <ResetPassword />;
+  redirect("/auth/login");
 }

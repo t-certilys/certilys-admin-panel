@@ -1,6 +1,6 @@
 import {
   ApiIcon,
-  CookBookIcon,
+  DatabaseIcon,
   DashboardSquare01Icon,
   HelpCircleIcon,
   Settings01Icon,
@@ -36,10 +36,10 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         icon: DashboardSquare01Icon,
       },
       {
-        title: "Base des recettes",
-        shortTitle: "Recettes",
-        url: "/dashboard/recipes-db",
-        icon: CookBookIcon,
+        title: "Base des formations",
+        shortTitle: "Formations",
+        url: "/dashboard/courses-db",
+        icon: DatabaseIcon,
       },
       {
         title: "Equipes",
