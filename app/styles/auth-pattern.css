@@ -1,0 +1,4 @@
+.auth-pattern {
+  background-color: var(--accent);
+  background-image: url("/images/patterns/brick-wall-dark.png");
+}

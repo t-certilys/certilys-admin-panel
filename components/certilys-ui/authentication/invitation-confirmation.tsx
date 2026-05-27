@@ -74,18 +74,17 @@ export default function InvitationConfirmation() {
   if (loading) {
     return (
       <div className="min-h-screen flex">
-        <div className="hidden lg:flex lg:w-1/2 bg-muted items-center justify-center p-12">
-          <div className="w-full h-full flex items-center justify-center">
-            <Image
-              src="/images/illustrations/Invite-cuate.svg"
-              alt="Illustration d'invitation"
-              width={500}
-              height={500}
-              className="max-w-full max-h-full object-contain"
-              priority
-            />
-          </div>
+        <div className="hidden lg:flex lg:w-1/2 auth-pattern items-center justify-center p-12">
+          <Image
+            src="/images/illustrations/Invite-cuate.svg"
+            alt="Illustration d'invitation"
+            width={500}
+            height={500}
+            className="max-w-full max-h-full object-contain"
+            priority
+          />
         </div>
+
         <div className="w-full lg:w-1/2 bg-black text-white flex items-center justify-center p-8">
           <p className="text-gray-400">Chargement...</p>
         </div>
@@ -96,18 +95,17 @@ export default function InvitationConfirmation() {
   if (error) {
     return (
       <div className="min-h-screen flex">
-        <div className="hidden lg:flex lg:w-1/2 bg-muted items-center justify-center p-12">
-          <div className="w-full h-full flex items-center justify-center">
-            <Image
-              src="/images/illustrations/Invite-cuate.svg"
-              alt="Illustration d'invitation"
-              width={500}
-              height={500}
-              className="max-w-full max-h-full object-contain"
-              priority
-            />
-          </div>
+        <div className="hidden lg:flex lg:w-1/2 auth-pattern items-center justify-center p-12">
+          <Image
+            src="/images/illustrations/Invite-cuate.svg"
+            alt="Illustration d'invitation"
+            width={500}
+            height={500}
+            className="max-w-full max-h-full object-contain"
+            priority
+          />
         </div>
+
         <div className="w-full lg:w-1/2 bg-black text-white flex items-center justify-center p-8">
           <div className="max-w-md w-full text-center">
             <HugeiconsIcon
@@ -115,8 +113,11 @@ export default function InvitationConfirmation() {
               className="mx-auto size-12 text-destructive"
               strokeWidth={1.5}
             />
+
             <h1 className="mt-4 text-center font-semibold text-2xl">Erreur</h1>
+
             <p className="mt-2 text-gray-400">{error}</p>
+
             <Button
               className="mt-6 w-full bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => router.push("/auth/login")}
@@ -131,18 +132,16 @@ export default function InvitationConfirmation() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Section - Illustration */}
-      <div className="hidden lg:flex lg:w-1/2 bg-muted items-center justify-center p-12">
-        <div className="w-full h-full flex items-center justify-center">
-          <Image
-            src="/images/illustrations/Invite-cuate.svg"
-            alt="Illustration d'invitation"
-            width={500}
-            height={500}
-            className="max-w-full max-h-full object-contain"
-            priority
-          />
-        </div>
+      {/* Left Section - Pattern */}
+      <div className="hidden lg:flex lg:w-1/2 auth-pattern items-center justify-center p-12">
+        <Image
+          src="/images/illustrations/Invite-cuate.svg"
+          alt="Illustration d'invitation"
+          width={500}
+          height={500}
+          className="max-w-full max-h-full object-contain"
+          priority
+        />
       </div>
 
       {/* Right Section - Content on black background */}
@@ -154,16 +153,18 @@ export default function InvitationConfirmation() {
               Invitation à rejoindre l'équipe{" "}
               <span className="text-primary">Certilys</span>
             </h1>
+
             <p className="text-gray-400">
               Vous avez été invité à rejoindre l'équipe d'administration de
-              l'application Certilys. Vous pouvez accepter ou rejeter la demande.
+              l'application Certilys. Vous pouvez accepter ou rejeter la
+              demande.
             </p>
           </div>
 
-          {/* Benefits */}
+          {/* Responsibilities */}
           <div className="mb-10 space-y-4">
             <h2 className="text-lg font-semibold mb-4">
-              Avantages en tant qu'administrateur
+              Responsabilités de l'administration
             </h2>
 
             <div className="flex items-start gap-4">
@@ -174,10 +175,12 @@ export default function InvitationConfirmation() {
                   strokeWidth={1.5}
                 />
               </div>
+
               <div>
-                <h3 className="font-medium">Gestion des recettes</h3>
+                <h3 className="font-medium">Validation des formations</h3>
                 <p className="text-sm text-gray-400">
-                  Gérer la base de données des recettes de manière complète
+                  Examiner les formations soumises avant leur publication sur la
+                  marketplace.
                 </p>
               </div>
             </div>
@@ -190,10 +193,12 @@ export default function InvitationConfirmation() {
                   strokeWidth={1.5}
                 />
               </div>
+
               <div>
-                <h3 className="font-medium">Gestion des utilisateurs</h3>
+                <h3 className="font-medium">Validation des formateurs</h3>
                 <p className="text-sm text-gray-400">
-                  Gérer les utilisateurs de la plateforme et leurs permissions
+                  Contrôler les profils formateurs, leurs dossiers de
+                  vérification et leurs autorisations de publication.
                 </p>
               </div>
             </div>

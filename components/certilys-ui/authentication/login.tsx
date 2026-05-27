@@ -1,4 +1,4 @@
-import { Logo } from "@/components/certilys-ui/logo";
+import { CtyIcon } from "@/components/icons/cty-i";
 import Link from "next/link";
 import { LoginForm } from "@/components/certilys-ui/authentication/login-form";
 
@@ -6,7 +6,7 @@ const Login = () => (
   <div className="flex min-h-screen items-center justify-center py-12">
     <div className="mx-auto w-full border border-border/70 pb-0 max-sm:border-t-0 sm:max-w-md sm:rounded-xl sm:bg-card sm:p-1 sm:shadow-lg/3">
       <div className="border border-border/70 bg-muted/60 px-10 py-14 max-sm:border-x-0 sm:rounded-lg sm:shadow-sm/2">
-        <Logo className="mx-auto mb-3" width={64} height={64} />
+        <CtyIcon className="mx-auto mb-3 text-primary h-10 w-10" />
         <h1 className="mt-3 text-center font-semibold text-2xl">
           Se connecter à Certilys
         </h1>

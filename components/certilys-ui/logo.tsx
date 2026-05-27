@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { CtyIcon } from "@/components/icons/cty-i";
 
 type LogoVariant = "auth" | "sidebar" | "collapsed";
 
@@ -39,8 +40,11 @@ export const Logo = ({
   let lightSrc = "/images/logos/cty-lvw.svg";
 
   if (variant === "collapsed") {
-    darkSrc = "/images/icons/cty-i.svg";
-    lightSrc = "/images/icons/cty-i.svg";
+    return (
+      <div className={cn("relative flex items-center justify-center", className)}>
+        <CtyIcon className="text-primary" width={w} height={h} />
+      </div>
+    );
   } else if (variant === "sidebar") {
     darkSrc = "/images/logos/cty-lvb.svg";
     lightSrc = "/images/logos/cty-lvw.svg";
