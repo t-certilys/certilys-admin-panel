@@ -1,3 +1,41 @@
+# Certilys Admin Panel
+
+Panneau d'administration Next.js 16 pour la plateforme Certilys (e-learning / formation professionnelle).
+
+## Dashboard Certilys (`/dashboard`)
+
+### Composants Dashboard (Mai 2026)
+
+| Composant | Fichier | Description |
+|---|---|---|
+| Header | `components/certilys-ui/dashboard/admin-dashboard-header.tsx` | Titre, sous-titre, actions (Export CSV, Voir validations) |
+| KPI Cards | `components/certilys-ui/dashboard/kpi-cards.tsx` | 4 cartes avec sparklines Bklit Area (CA brut, Formateurs, Formations, Taux de validation) |
+| Revenue Chart | `components/certilys-ui/dashboard/revenue-chart.tsx` | Area chart dual-série (CA brut + Commission) sur 30 jours |
+| Validation Chart | `components/certilys-ui/dashboard/validation-chart.tsx` | Bar chart recharts (4 séries) hebdomadaire |
+| Priority Actions | `components/certilys-ui/dashboard/priority-actions.tsx` | Bloc 5 actions prioritaires avec niveaux d'urgence |
+| Recent Orders | `components/certilys-ui/dashboard/recent-orders.tsx` | Tableau des 5 dernières commandes avec statuts |
+
+### Données Mock Dashboard
+- `lib/mock/admin-dashboard-data.ts` — Types TypeScript, données mock, formatage `F CFA` (UI) / `XOF` (API)
+
+### Conventions Métier
+- **Devise UI** : `1 250 000 F CFA` (formatage `fr-FR`)
+- **Devise données/API** : `{ currency: "XOF" }`
+- **Routes métier** : `/dashboard/instructors`, `/dashboard/courses`, `/dashboard/orders`, `/dashboard/users`, `/dashboard/audit-logs`
+
+### Librairies Charts
+- **Bklit UI** : `@bklit/stat-card-area-01` + `@bklit/stat-card-line-01` (composants `AreaChart`, `Area`, `LineChart`, `Line` basés sur `@visx`)
+- **Recharts** : Utilisé pour le Validation Chart (bar chart simple)
+
+### Dépendances Ajoutées
+```
+@types/d3-array         — Types pour d3-array (requis par Bklit)
+@bklit/stat-card-area-01 — Sparkline area cards
+@bklit/stat-card-line-01 — Sparkline line cards
+```
+
+---
+
 # DIGISAM — Site Web d'Agence Digitale
 
 Projet Next.js 16 avec Tailwind CSS v4 et composants coss UI.
