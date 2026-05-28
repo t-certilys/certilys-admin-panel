@@ -92,6 +92,27 @@ Projet Next.js 16 avec Tailwind CSS v4 et composants coss UI.
 
 ## Changements Récents
 
+### Améliorations & Corrections du Dashboard Certilys (Mai 2026)
+- **Design & Performance CSS (`globals.css`)** :
+  - Suppression de la règle `@custom-variant dark` et de tout le bloc `.dark {}` (le panel d'administration étant exclusivement clair pour le moment).
+  - Correction des variables de couleurs Bklit mal générées (remplacement de `var(----chart-*)` par `var(--chart-*)`).
+- **Visibilité et Rendu des Graphiques** :
+  - **Migration Recharts pour Revenue Chart** : Remplacement complet des composants Bklit `AreaChart`/`Area` (qui souffraient d'un bug interne `@visx` tronquant et masquant les courbes) par une implémentation native et robuste en **Recharts pur** (`ResponsiveContainer`, `AreaChart`, `Area`, `XAxis`, `YAxis`, `CartesianGrid`, `Tooltip`).
+  - **Robustesse Mobile & Resize** : Désactivation des animations internes Recharts (`isAnimationActive={false}`) pour les deux tracés, empêchant tout bug de rendu de tracé et de `clipPath` SVG au redimensionnement ou sur smartphone.
+  - **Styles & Visibilité premium** :
+    - Tracés nets avec un `strokeWidth` de `2.5` (CA brut) et `2.0` (Commission).
+    - Gradients linéaires personnalisés (`caBrutGradient` et `commissionGradient`) avec opacités parfaitement dosées (`0.22` à `0.02` et `0.16` à `0.02`) pour un effet haut de gamme sur fond blanc.
+    - Conteneur mesurable fluide de hauteur fixe (`h-[320px] sm:h-[360px]`).
+  - **Custom Tooltip haut de gamme** : Développement d'un tooltip Recharts personnalisé assorti au design premium de l'administration (fond sombre `#2a2b2d` via classes `bg-neutral-800`, bordures fines, typographies soignées, points colorés de repères et valeurs monétaires tabulaires alignées formatées en `F CFA`).
+- **KPI Cards** :
+  - Remplacement de l'effet d'ombre générique `hover:shadow-sm` par un effet discret et haut de gamme : `transition-[border-color,background-color,transform] hover:border-primary/25 hover:bg-primary/[0.015] hover:-translate-y-px`.
+  - Intégration de `min-w-0` et `overflow-hidden` sur chaque carte KPI pour prévenir la compression.
+  - Utilisation de la police responsive `clamp` (`text-[clamp(1.25rem,2vw,1.75rem)]`) pour la valeur principale.
+- **Responsivité Globale** :
+  - Remplacement de la grille rigide à 4 colonnes par une grille adaptative auto-fit (`[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]`) offrant une responsivité fluide sur tablette.
+- **Optimisation des Images (Warnings Next/Image)** :
+  - Correction du logo `/images/logos/cty-lvw.svg` en ajoutant des classes `w-auto h-auto` et un style inline `style={{ width: "auto", height: "auto" }}` afin de supprimer définitivement le warning Next/Image relatif au redimensionnement asymétrique.
+
 ### Suppression des Sélecteurs de Test (Mai 2026)
 - ✅ **Nettoyage de l'interface** : Retrait de tous les éléments de contrôle de test et de simulation visibles dans l'interface utilisateur pour la mise en production.
 - ✅ **Authentification & Invitation** : Suppression définitive du sélecteur de jetons de test sur l'écran d'invitation invalide (`invitation-confirmation.tsx`), garantissant un écran d'erreur propre, sobre et parfaitement centré.

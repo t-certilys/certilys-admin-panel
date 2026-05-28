@@ -1,6 +1,14 @@
 "use client";
 
-import { curveCardinal } from "@visx/curve";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   Card,
@@ -9,16 +17,15 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { AreaChart, Area } from "@/components/charts/area-chart";
-import { Grid } from "@/components/charts/grid";
-import { XAxis } from "@/components/charts/x-axis";
-import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
 
-import { revenueData, type RevenuePoint } from "@/lib/mock/admin-dashboard-data";
+import {
+  revenueData,
+  type RevenuePoint,
+} from "@/lib/mock/admin-dashboard-data";
 
-// Convertir les RevenuePoint en format attendu par Bklit (date: Date)
+// Préparation des données pour le graphique
 const chartData = revenueData.map((pt: RevenuePoint) => ({
-  date: new Date(pt.date),
+  date: pt.date,
   caBrut: pt.caBrut,
   commission: pt.commission,
 }));
@@ -29,6 +36,44 @@ function fmtXOF(val: number) {
     " F CFA"
   );
 }
+
+// Tooltip personnalisé et haut de gamme
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const dateObj = new Date(label);
+    const dateFormatted = dateObj.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
+    return (
+      <div className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700/60 shadow-lg text-xs font-sans min-w-[200px]">
+        <p className="font-semibold text-neutral-400 mb-2">{dateFormatted}</p>
+        <div className="flex flex-col gap-1.5">
+          {payload.map((entry: any) => (
+            <div
+              key={entry.name}
+              className="flex items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="size-2 rounded-full inline-block"
+                  style={{ backgroundColor: entry.stroke || entry.color }}
+                />
+                <span className="text-neutral-300">{entry.name}</span>
+              </div>
+              <span className="font-bold tabular-nums">
+                {fmtXOF(entry.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function RevenueChart() {
   return (
@@ -72,64 +117,109 @@ export function RevenueChart() {
         </div>
       </CardHeader>
 
-      <CardContent className="px-3 pb-4 pt-2 sm:px-5">
+      <CardContent className="px-3 pb-4 pt-4 sm:px-5">
         <div
           role="img"
           aria-label="Graphique en aires des revenus Certilys sur 30 jours"
+          className="h-[320px] w-full sm:h-[360px]"
         >
-          <AreaChart
-            aspectRatio="3 / 1"
-            className="w-full"
-            data={chartData}
-            margin={{ top: 20, right: 16, bottom: 36, left: 16 }}
-            animationDuration={900}
-          >
-            {/* Grille */}
-            <Grid horizontal numTicksRows={4} strokeDasharray="3,3" />
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+            >
+              <defs>
+                <linearGradient id="caBrutGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--chart-1)"
+                    stopOpacity={0.22}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--chart-1)"
+                    stopOpacity={0.02}
+                  />
+                </linearGradient>
+                <linearGradient
+                  id="commissionGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="var(--chart-2)"
+                    stopOpacity={0.16}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--chart-2)"
+                    stopOpacity={0.02}
+                  />
+                </linearGradient>
+              </defs>
 
-            {/* Axe X */}
-            <XAxis numTicks={6} />
+              {/* Grille */}
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                strokeOpacity={0.4}
+              />
 
-            {/* Tooltip avec rows personnalisés */}
-            <ChartTooltip
-              rows={(point) => [
-                {
-                  label: "CA brut",
-                  value: fmtXOF(point.caBrut as number),
-                  color: "var(--chart-1)",
-                },
-                {
-                  label: "Commission",
-                  value: fmtXOF(point.commission as number),
-                  color: "var(--chart-2)",
-                },
-              ]}
-            />
+              {/* Axes */}
+              <XAxis
+                dataKey="date"
+                tickFormatter={(tick) => {
+                  const d = new Date(tick);
+                  return d.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+                minTickGap={32}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                dy={8}
+              />
+              <YAxis
+                hide={true}
+                domain={["dataMin - 20000", "dataMax + 50000"]}
+              />
 
-            {/* Série Commission — gradient interne Bklit */}
-            <Area
-              curve={curveCardinal.tension(0.6)}
-              dataKey="commission"
-              fill="var(--chart-2)"
-              fillOpacity={0.2}
-              gradientToOpacity={0}
-              stroke="var(--chart-2)"
-              strokeWidth={1.5}
-              showHighlight={false}
-            />
+              {/* Info-bulle personnalisée */}
+              <Tooltip content={<CustomTooltip />} />
 
-            {/* Série CA brut — gradient interne Bklit */}
-            <Area
-              curve={curveCardinal.tension(0.6)}
-              dataKey="caBrut"
-              fill="var(--chart-1)"
-              fillOpacity={0.3}
-              gradientToOpacity={0}
-              showHighlight
-              stroke="var(--chart-1)"
-              strokeWidth={2}
-            />
-          </AreaChart>
+              {/* Tracé Commission */}
+              <Area
+                type="monotone"
+                name="Commission"
+                dataKey="commission"
+                stroke="var(--chart-2)"
+                fill="url(#commissionGradient)"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+                isAnimationActive={false}
+              />
+
+              {/* Tracé CA brut */}
+              <Area
+                type="monotone"
+                name="CA brut"
+                dataKey="caBrut"
+                stroke="var(--chart-1)"
+                fill="url(#caBrutGradient)"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 4 }}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>

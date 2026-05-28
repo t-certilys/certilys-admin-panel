@@ -5,15 +5,11 @@ import { ValidationChart } from "@/components/certilys-ui/dashboard/validation-c
 import { PriorityActions } from "@/components/certilys-ui/dashboard/priority-actions";
 import { RecentOrders } from "@/components/certilys-ui/dashboard/recent-orders";
 
-import {
-  kpiData,
-  priorityActions,
-} from "@/lib/mock/admin-dashboard-data";
+import { kpiData, priorityActions } from "@/lib/mock/admin-dashboard-data";
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 py-4 lg:gap-8 lg:py-6 @container/main">
-
       {/* ── 1. Header ─────────────────────────────────────────────────── */}
       <AdminDashboardHeader />
 
@@ -41,7 +37,6 @@ export default function DashboardPage() {
       <div className="px-4 pb-4 lg:px-6 lg:pb-6">
         <RecentOrders />
       </div>
-
     </div>
   );
 }

@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Area,
-  AreaChart,
-} from "@/components/charts/area-chart";
+import { Area, AreaChart } from "@/components/charts/area-chart";
 import { ChartStatFlow } from "@/components/charts/chart-stat-flow";
 import { curveCardinal } from "@visx/curve";
 import { LinearGradient } from "@visx/gradient";

@@ -62,13 +62,14 @@ export const Logo = ({
         width={w}
         height={h}
         className={cn(
-          "object-contain",
+          "object-contain w-auto h-auto",
           themeOverride === "dark"
             ? "block"
             : themeOverride === "light"
               ? "hidden"
               : "hidden dark:block",
         )}
+        style={{ width: "auto", height: "auto" }}
         priority
       />
 
@@ -78,13 +79,14 @@ export const Logo = ({
         width={w}
         height={h}
         className={cn(
-          "object-contain",
+          "object-contain w-auto h-auto",
           themeOverride === "light"
             ? "block"
             : themeOverride === "dark"
               ? "hidden"
               : "block dark:hidden",
         )}
+        style={{ width: "auto", height: "auto" }}
         priority
       />
     </div>

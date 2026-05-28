@@ -56,7 +56,7 @@ function KpiCard({ kpi }: { kpi: DashboardKpi }) {
   const color = areaColor(kpi.trendDirection);
 
   return (
-    <Card className="w-full gap-0 py-0 border-border/60 bg-card shadow-none transition-shadow hover:shadow-sm hover:border-border">
+    <Card className="w-full gap-0 py-0 border-border/60 bg-card shadow-none transition-[border-color,background-color,transform] hover:border-primary/25 hover:bg-primary/[0.015] hover:-translate-y-px min-w-0 overflow-hidden">
       <CardHeader className="px-4 pt-4 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground leading-none">
           {kpi.label}
@@ -76,12 +76,10 @@ function KpiCard({ kpi }: { kpi: DashboardKpi }) {
       <CardContent className="flex flex-col gap-2 px-4 pt-0 pb-3">
         {/* Valeur principale */}
         <div className="flex flex-col gap-0.5">
-          <span className="text-2xl font-bold text-foreground tabular-nums">
+          <span className="text-[clamp(1.25rem,2vw,1.75rem)] font-bold text-foreground tabular-nums leading-tight">
             {kpi.displayValue}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {kpi.context}
-          </span>
+          <span className="text-xs text-muted-foreground">{kpi.context}</span>
         </div>
 
         {/* Mini sparkline — Bklit Area sans hover bridge (évite boucle infinie) */}
@@ -116,7 +114,7 @@ export function KpiCards({ kpis }: { kpis: DashboardKpi[] }) {
   return (
     <section
       aria-label="Indicateurs clés de performance Certilys"
-      className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6"
+      className="grid gap-4 px-4 lg:px-6 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]"
     >
       {kpis.map((kpi) => (
         <KpiCard key={kpi.id} kpi={kpi} />
