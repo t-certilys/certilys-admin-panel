@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono, Sora } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPaletteProvider } from "@/components/providers/command-provider";
@@ -43,16 +44,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        <ThemeProvider>
-          <CommandPaletteProvider>
-            <TooltipProvider>
-              {children}
-              <SearchDialog />
-              <QuickCreateDialog />
-              <ShortcutsDialog />
-            </TooltipProvider>
-          </CommandPaletteProvider>
-        </ThemeProvider>
+        <NuqsAdapter>
+          <ThemeProvider>
+            <CommandPaletteProvider>
+              <TooltipProvider>
+                {children}
+                <SearchDialog />
+                <QuickCreateDialog />
+                <ShortcutsDialog />
+              </TooltipProvider>
+            </CommandPaletteProvider>
+          </ThemeProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

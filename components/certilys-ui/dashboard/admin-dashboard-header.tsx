@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Download, CheckSquare } from "lucide-react";
+import { Download01Icon, CheckmarkSquare01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 
 export function AdminDashboardHeader() {
@@ -24,7 +25,7 @@ export function AdminDashboardHeader() {
           className="gap-2 border-border text-foreground hover:bg-muted"
           aria-label="Exporter les données au format CSV"
         >
-          <Download className="size-4" aria-hidden="true" />
+          <HugeiconsIcon icon={Download01Icon} className="size-4" size={16} strokeWidth={1.5} aria-hidden="true" />
           <span>Exporter CSV</span>
         </Button>
 
@@ -38,7 +39,7 @@ export function AdminDashboardHeader() {
             href="/dashboard/courses"
             aria-label="Accéder à la liste des formations à valider"
           >
-            <CheckSquare className="size-4" aria-hidden="true" />
+            <HugeiconsIcon icon={CheckmarkSquare01Icon} className="size-4" size={16} strokeWidth={1.5} aria-hidden="true" />
             <span>Voir les validations</span>
           </Link>
         </Button>

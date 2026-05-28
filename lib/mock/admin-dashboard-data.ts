@@ -247,7 +247,7 @@ export const priorityActions: PriorityAction[] = [
     label: "Formateurs en attente de validation",
     count: 7,
     urgency: "critical",
-    href: "/dashboard/instructors",
+    href: "/dashboard/instructors?status=PENDING",
   },
   {
     id: "formations-submitted",

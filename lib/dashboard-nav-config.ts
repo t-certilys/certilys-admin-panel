@@ -47,7 +47,7 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
       {
         title: "Formateurs",
         shortTitle: "Formateurs",
-        url: "/dashboard/team",
+        url: "/dashboard/instructors",
         icon: UserGroupIcon,
       },
       {

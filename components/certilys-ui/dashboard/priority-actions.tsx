@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ChevronRight, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import {
+  ArrowRight01Icon,
+  AlertCircleIcon,
+  Alert01Icon,
+  InformationCircleIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -14,26 +20,26 @@ import { type PriorityAction, type ActionUrgency } from "@/lib/mock/admin-dashbo
 const urgencyConfig: Record<
   ActionUrgency,
   {
-    icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+    icon: any;
     iconClass: string;
     badgeClass: string;
     badgeLabel: string;
   }
 > = {
   critical: {
-    icon: AlertCircle,
+    icon: AlertCircleIcon,
     iconClass: "text-destructive",
     badgeClass: "border-destructive/30 bg-destructive/10 text-destructive",
     badgeLabel: "Critique",
   },
   warning: {
-    icon: AlertTriangle,
+    icon: Alert01Icon,
     iconClass: "text-amber-500",
     badgeClass: "border-amber-500/30 bg-amber-500/10 text-amber-500",
     badgeLabel: "Attention",
   },
   info: {
-    icon: Info,
+    icon: InformationCircleIcon,
     iconClass: "text-muted-foreground",
     badgeClass: "border-border bg-muted text-muted-foreground",
     badgeLabel: "Info",
@@ -54,8 +60,11 @@ function ActionRow({ action }: { action: PriorityAction }) {
       aria-label={`${action.label} — ${action.count} élément${action.count > 1 ? "s" : ""} — Urgence : ${cfg.badgeLabel}`}
     >
       {/* Icône urgence */}
-      <Icon
+      <HugeiconsIcon
+        icon={Icon}
         className={`size-4 shrink-0 ${cfg.iconClass}`}
+        size={16}
+        strokeWidth={1.5}
         aria-hidden={true}
       />
 
@@ -74,8 +83,11 @@ function ActionRow({ action }: { action: PriorityAction }) {
       </Badge>
 
       {/* Chevron */}
-      <ChevronRight
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
         className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+        size={16}
+        strokeWidth={1.5}
         aria-hidden={true}
       />
     </Link>

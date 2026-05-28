@@ -17,6 +17,55 @@ Panneau d'administration Next.js 16 pour la plateforme Certilys (e-learning / fo
 
 ### Données Mock Dashboard
 - `lib/mock/admin-dashboard-data.ts` — Types TypeScript, données mock, formatage `F CFA` (UI) / `XOF` (API)
+- **Priority Action "Formateurs en attente"** redirige désormais vers `/dashboard/instructors?status=PENDING`
+
+---
+
+## Page Formateurs (`/dashboard/instructors`) — Ajout Mai 2026
+
+### Routes
+| Route | Fichier | Description |
+|---|---|---|
+| `/dashboard/instructors` | `app/dashboard/instructors/page.tsx` | Liste admin des candidatures formateurs Certilys |
+| `/dashboard/instructors/[id]` | `app/dashboard/instructors/[id]/page.tsx` | Dossier complet d'un formateur |
+
+### Architecture
+- **Données Mock** : `lib/mock/admin-instructors-data.ts`
+  - Types : `InstructorApplication`, `InstructorApplicationStatus`, `InstructorKpi`, `InstructorFilters`
+  - Statuts : `NOT_SUBMITTED | PENDING | APPROVED | REJECTED | CHANGES_REQUESTED`
+  - 15 candidatures mock avec données réalistes (pays africains + France, spécialités variées)
+- **Gestion URL** : `nuqs` (v2.8.9) — paramètre `?status=` synchronisé avec les filtres
+- **NuqsAdapter** ajouté dans `app/layout.tsx` (wrapping racine)
+
+### Fonctionnalités Implémentées
+- ✅ **Header** : Titre, sous-titre, Export CSV fonctionnel, bouton "Dossiers en attente" (→ `?status=PENDING`)
+- ✅ **KPI compacts** (4 cartes) : En attente, Approuvés, Corrections demandées, Rejetés — cliquables pour filtrer
+- ✅ **Recherche + filtres** : Composant `SearchFilter` réutilisé (input + entonnoir + Sheet)
+  - Filtres : Statut, Spécialité principale, Pays, Période de soumission (date from/to), Dossier complet
+- ✅ **Table responsive** : Avatar/initiales, nom, email, badge statut, spécialité, pays, date soumission, formations soumises, actions
+- ✅ **Actions avec confirmation** : Approuver, Demander corrections, Rejeter via `DropdownMenu` + `Dialog`
+  - Motif obligatoire pour Rejet et Corrections (min. 10 caractères)
+  - Audit log simulé : `INSTRUCTOR_APPROVED`, `INSTRUCTOR_CHANGES_REQUESTED`, `INSTRUCTOR_REJECTED`
+- ✅ **États UI** : Loading (Skeleton), table vide, aucun résultat, erreur action, loading action, succès optimiste
+- ✅ **Accès ADMIN/MODERATOR** : Protégé par le layout dashboard existant
+- ✅ **Navigation** : Lien sidebar "Formateurs" mis à jour vers `/dashboard/instructors` avec badge `7`
+
+### Actions Backend (simulées)
+```
+POST /admin/instructor-applications/:id/approve
+POST /admin/instructor-applications/:id/request-changes
+POST /admin/instructor-applications/:id/reject
+```
+
+### Règles Métier
+- Formateur non approuvé = publication interdite (mention dans la page détail)
+- Liste = résumé uniquement ; dossier complet dans `/dashboard/instructors/[id]`
+- Données sensibles non exposées inutilement
+
+### Dépendances Ajoutées
+```
+nuqs 2.8.9 — Gestion de l'état URL (query params synchronisés côté client)
+```
 
 ### Conventions Métier
 - **Devise UI** : `1 250 000 F CFA` (formatage `fr-FR`)

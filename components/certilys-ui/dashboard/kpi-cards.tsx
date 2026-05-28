@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { ArrowUp01Icon, ArrowDown01Icon, MinusSignIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { curveCardinal } from "@visx/curve";
 
 import {
@@ -23,10 +24,10 @@ import {
 
 function TrendIcon({ direction }: { direction: TrendDirection }) {
   if (direction === "up")
-    return <ArrowUp className="size-3" aria-hidden={true} />;
+    return <HugeiconsIcon icon={ArrowUp01Icon} className="size-3" size={12} strokeWidth={1.5} aria-hidden={true} />;
   if (direction === "down")
-    return <ArrowDown className="size-3" aria-hidden={true} />;
-  return <Minus className="size-3" aria-hidden={true} />;
+    return <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" size={12} strokeWidth={1.5} aria-hidden={true} />;
+  return <HugeiconsIcon icon={MinusSignIcon} className="size-3" size={12} strokeWidth={1.5} aria-hidden={true} />;
 }
 
 function trendBadgeClass(direction: TrendDirection): string {
