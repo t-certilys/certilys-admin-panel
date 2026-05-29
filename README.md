@@ -82,6 +82,44 @@ nuqs 2.8.9 — Gestion de l'état URL (query params synchronisés côté client)
 @bklit/stat-card-area-01 — Sparkline area cards
 @bklit/stat-card-line-01 — Sparkline line cards
 ```
+---
+
+## Page Validation des Formations (`/dashboard/courses`) — Ajout Mai 2026
+
+### Routes
+| Route | Fichier | Description |
+|---|---|---|
+| `/dashboard/courses` | `app/dashboard/courses/page.tsx` | Tableau de bord de validation des formations soumises |
+| `/dashboard/courses/[id]` | `app/dashboard/courses/[id]/page.tsx` | Dossier d'évaluation détaillé de la formation |
+
+### Architecture & Données Mock
+- **Fichier de Données** : `lib/mock/admin-courses-data.ts`
+  - Types : `AdminCourseSubmission`, `CourseSubmissionStatus`, `CourseReviewKpi`, `CourseReviewFilters`, `CourseModule`, `CourseLesson`, `CourseAsset`
+  - Statuts : `DRAFT | SUBMITTED | APPROVED | REJECTED | ARCHIVED`
+  - 12 formations mock réalistes couvrant diverses disciplines (Design, Développement, Marketing, etc.).
+- **Gestion URL** : Synchronisation du paramètre de filtre de statut `?status=` avec `nuqs` (v2.8.9) pour une réactivité optimale et des liens partageables.
+
+### Fonctionnalités Implémentées
+- ✅ **Header & Métriques** : Titre explicite, Export CSV fluide et filtré, bouton direct "Formations soumises" (→ `?status=SUBMITTED`).
+- ✅ **KPI compacts** (4 cartes interactives) : Soumises, Approuvées, Rejetées/Corrections, Archivées — cliquables pour filtrer instantanément la table.
+- ✅ **Recherche + Filtres avancés** : Réutilisation du composant centralisé `SearchFilter` (Sheet).
+  - Critères : Statut, Catégorie, Niveau, Formateur, Période de soumission, Prix minimum / maximum.
+- ✅ **Table de Soumissions complète** : Titre/Slug/Date de soumission, Formateur, Catégorie, Niveau, Prix, Badge de statut, Actions rapides.
+- ✅ **Dossier de Formation Détaillé** :
+  - *Résumé* : Titre, sous-titre, slug SEO, formateur (avec état d'approbation), catégorie, niveau, langue, prix/prix promo, date de soumission.
+  - *Contenu commercial* : Description complète (alerte de longueur < 50 chars), objectifs/bénéfices, prérequis, public cible.
+  - *Médias* : Miniature de la formation, vidéo promotionnelle (avec lecteur natif ou alerte d'absence).
+  - *Programme pédagogique* : Accordéon des modules, leçons, statuts d'encodage vidéo, durée, aperçus gratuits, ressources téléchargeables.
+  - *Checklist d'évaluation* (9 critères) : Évaluation automatisée de la qualité (titre, description >= 50 chars, prix > 0, catégorie/niveau, modules/leçons existantes, vidéos prêtes, formateur approuvé).
+- ✅ **Décisions Administratives avec Audit** :
+  - Boutons d'actions contextuels : Approuver (désactivé si critères bloquants manquants), Demander des corrections, Rejeter.
+  - Saisie de motif obligatoire (min. 10 caractères) pour rejet ou demande de corrections.
+  - Historique de la décision précédente affiché en alerte si existant.
+  - Journalisation simulée de l'audit log : `COURSE_APPROVED`, `COURSE_CHANGES_REQUESTED`, `COURSE_REJECTED`.
+- ✅ **États d'interface complets** : Squelettes de chargement (Skeletons), table vide, aucun résultat, traitement de l'action avec spinner et messages d'erreur.
+
+### Règles Métier Majeures
+- **Blocage de l'approbation** : Si des critères bloquants (ex. formateur non approuvé, pas de leçons dans la formation) ne sont pas satisfaits, le bouton "Approuver" est désactivé et un bandeau d'alerte rouge explicite est affiché.
 
 ---
 

@@ -1,6 +1,6 @@
 import {
   DashboardSquare01Icon,
-  DatabaseIcon,
+  Book01Icon,
   UserGroupIcon,
   Settings01Icon,
   HelpCircleIcon,
@@ -41,8 +41,8 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
       {
         title: "Formations",
         shortTitle: "Formations",
-        url: "/dashboard/courses-db",
-        icon: DatabaseIcon,
+        url: "/dashboard/courses",
+        icon: Book01Icon,
       },
       {
         title: "Formateurs",

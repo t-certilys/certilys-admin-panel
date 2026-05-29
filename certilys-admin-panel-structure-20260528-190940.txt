@@ -1,0 +1,274 @@
+﻿certilys-admin-panel
+Generated : 2026-05-28 19:09:41
+Root      : C:\Users\HP\Desktop\mes-dossiers\dev-workspace\_local-projects\_leonardo\certilys\certilys-admin-panel
+Files     : 222
+================================================================================
+
+.
+|-- app
+|   |-- auth
+|   |   |-- 2fa
+|   |   |   |-- setup
+|   |   |   |   +-- page.tsx
+|   |   |   +-- page.tsx
+|   |   |-- forgot-password
+|   |   |   +-- page.tsx
+|   |   |-- invitation
+|   |   |   +-- page.tsx
+|   |   |-- login
+|   |   |   +-- page.tsx
+|   |   |-- reset-password
+|   |   |   +-- page.tsx
+|   |   +-- verify-otp
+|   |       +-- page.tsx
+|   |-- dashboard
+|   |   |-- courses-db
+|   |   |   +-- page.tsx
+|   |   |-- help
+|   |   |   +-- page.tsx
+|   |   |-- instructors
+|   |   |   |-- [id]
+|   |   |   |   +-- page.tsx
+|   |   |   +-- page.tsx
+|   |   |-- notifications
+|   |   |   +-- page.tsx
+|   |   |-- team
+|   |   |   +-- page.tsx
+|   |   |-- data.json
+|   |   |-- layout.tsx
+|   |   +-- page.tsx
+|   |-- settings
+|   |   |-- account
+|   |   |   +-- page.tsx
+|   |   |-- billing
+|   |   |   +-- page.tsx
+|   |   |-- privacy
+|   |   |   +-- page.tsx
+|   |   |-- profile
+|   |   |   +-- page.tsx
+|   |   |-- security
+|   |   |   +-- page.tsx
+|   |   |-- layout.tsx
+|   |   +-- page.tsx
+|   |-- styles
+|   |   +-- patterns.css
+|   |-- favicon.ico
+|   |-- globals.css
+|   |-- layout.tsx
+|   +-- page.tsx
+|-- components
+|   |-- certilys-ui
+|   |   |-- authentication
+|   |   |   |-- forgot-password.tsx
+|   |   |   |-- forgot-password-form.tsx
+|   |   |   |-- icons.tsx
+|   |   |   |-- invitation-confirmation.tsx
+|   |   |   |-- login.tsx
+|   |   |   |-- login-form.tsx
+|   |   |   |-- reset-password.tsx
+|   |   |   |-- reset-password-form.tsx
+|   |   |   |-- two-factor-form.tsx
+|   |   |   |-- two-factor-setup-form.tsx
+|   |   |   |-- verify-otp.tsx
+|   |   |   +-- verify-otp-form.tsx
+|   |   |-- dashboard
+|   |   |   |-- admin-dashboard-header.tsx
+|   |   |   |-- chart-area-content.tsx
+|   |   |   |-- chart-area-interactive.tsx
+|   |   |   |-- data-table.tsx
+|   |   |   |-- header-notifications.tsx
+|   |   |   |-- kpi-cards.tsx
+|   |   |   |-- priority-actions.tsx
+|   |   |   |-- quick-create-dialog.tsx
+|   |   |   |-- recent-orders.tsx
+|   |   |   |-- revenue-chart.tsx
+|   |   |   |-- search-dialog.tsx
+|   |   |   |-- section-cards.tsx
+|   |   |   |-- shortcuts-dialog.tsx
+|   |   |   |-- shortcuts-list.tsx
+|   |   |   |-- site-header.tsx
+|   |   |   +-- validation-chart.tsx
+|   |   |-- settings
+|   |   |   |-- billing
+|   |   |   |   +-- payment-methods.tsx
+|   |   |   |-- settings-bottom-drawer.tsx
+|   |   |   |-- settings-bottom-nav.tsx
+|   |   |   |-- settings-header.tsx
+|   |   |   |-- settings-layout.tsx
+|   |   |   +-- settings-sidebar.tsx
+|   |   |-- bento-grid.tsx
+|   |   +-- logo.tsx
+|   |-- charts
+|   |   |-- tooltip
+|   |   |   |-- chart-tooltip.tsx
+|   |   |   |-- date-ticker.tsx
+|   |   |   |-- index.ts
+|   |   |   |-- tooltip-box.tsx
+|   |   |   |-- tooltip-content.tsx
+|   |   |   |-- tooltip-dot.tsx
+|   |   |   +-- tooltip-indicator.tsx
+|   |   |-- animation.ts
+|   |   |-- area.tsx
+|   |   |-- area-chart.tsx
+|   |   |-- area-gradient-defs.tsx
+|   |   |-- chart-config-context.tsx
+|   |   |-- chart-context.tsx
+|   |   |-- chart-defs.ts
+|   |   |-- chart-formatters.ts
+|   |   |-- chart-reveal-clip.tsx
+|   |   |-- chart-stat-flow.tsx
+|   |   |-- dash-tail-stroke.tsx
+|   |   |-- decimate-time-series.ts
+|   |   |-- fade-edges.ts
+|   |   |-- grid.tsx
+|   |   |-- highlight-segment.tsx
+|   |   |-- highlight-segment-bounds.ts
+|   |   |-- index.ts
+|   |   |-- line.tsx
+|   |   |-- line-chart.tsx
+|   |   |-- motion-utils.ts
+|   |   |-- path-stroke-utils.ts
+|   |   |-- pattern-area.tsx
+|   |   |-- series-bar-layout.ts
+|   |   |-- series-dash-tail-overlay.tsx
+|   |   |-- series-highlight-layer.tsx
+|   |   |-- series-hover-dim.tsx
+|   |   |-- series-markers.tsx
+|   |   |-- series-point-marker.tsx
+|   |   |-- time-series-chart-shell.tsx
+|   |   |-- use-chart-interaction.ts
+|   |   |-- use-highlight-segment.ts
+|   |   |-- use-mount-progress.ts
+|   |   |-- use-scheduled-tooltip.ts
+|   |   +-- x-axis.tsx
+|   |-- icons
+|   |   |-- cty-i.tsx
+|   |   +-- google.tsx
+|   |-- layout
+|   |   |-- app-sidebar.tsx
+|   |   |-- bottom-drawer.tsx
+|   |   |-- bottom-nav.tsx
+|   |   |-- dashboard-layout.tsx
+|   |   |-- nav-documents.tsx
+|   |   |-- nav-main.tsx
+|   |   |-- nav-secondary.tsx
+|   |   |-- nav-user.tsx
+|   |   +-- theme-toggle.tsx
+|   |-- providers
+|   |   |-- command-provider.tsx
+|   |   +-- theme-provider.tsx
+|   |-- ui
+|   |   |-- accordion.tsx
+|   |   |-- addon-input.tsx
+|   |   |-- alert.tsx
+|   |   |-- alert-dialog.tsx
+|   |   |-- aspect-ratio.tsx
+|   |   |-- avatar.tsx
+|   |   |-- badge.tsx
+|   |   |-- breadcrumb.tsx
+|   |   |-- button.tsx
+|   |   |-- button-group.tsx
+|   |   |-- calendar.tsx
+|   |   |-- card.tsx
+|   |   |-- carousel.tsx
+|   |   |-- character-counter.tsx
+|   |   |-- chart.tsx
+|   |   |-- checkbox.tsx
+|   |   |-- collapsible.tsx
+|   |   |-- combobox.tsx
+|   |   |-- command.tsx
+|   |   |-- context-menu.tsx
+|   |   |-- dialog.tsx
+|   |   |-- direction.tsx
+|   |   |-- drawer.tsx
+|   |   |-- dropdown-menu.tsx
+|   |   |-- email-input.tsx
+|   |   |-- empty.tsx
+|   |   |-- field.tsx
+|   |   |-- form.tsx
+|   |   |-- hover-card.tsx
+|   |   |-- input.tsx
+|   |   |-- input-group.tsx
+|   |   |-- input-otp.tsx
+|   |   |-- item.tsx
+|   |   |-- kbd.tsx
+|   |   |-- label.tsx
+|   |   |-- menubar.tsx
+|   |   |-- native-select.tsx
+|   |   |-- navigation-menu.tsx
+|   |   |-- pagination.tsx
+|   |   |-- password-input.tsx
+|   |   |-- phone-input.tsx
+|   |   |-- popover.tsx
+|   |   |-- profile-image-upload.tsx
+|   |   |-- progress.tsx
+|   |   |-- radio-group.tsx
+|   |   |-- resizable.tsx
+|   |   |-- scroll-area.tsx
+|   |   |-- search-filter.tsx
+|   |   |-- select.tsx
+|   |   |-- separator.tsx
+|   |   |-- sheet.tsx
+|   |   |-- sidebar.tsx
+|   |   |-- skeleton.tsx
+|   |   |-- slider.tsx
+|   |   |-- sonner.tsx
+|   |   |-- spinner.tsx
+|   |   |-- svgl-icon.tsx
+|   |   |-- switch.tsx
+|   |   |-- table.tsx
+|   |   |-- tabs.tsx
+|   |   |-- textarea.tsx
+|   |   |-- toggle.tsx
+|   |   |-- toggle-group.tsx
+|   |   +-- tooltip.tsx
+|   |-- stat-card-area.tsx
+|   |-- stat-card-chart.tsx
+|   |-- stat-card-hover-bridge.tsx
+|   |-- stat-card-line.tsx
+|   +-- trend-badge.tsx
+|-- data
+|   |-- revenue-series.ts
+|   +-- sessions-series.ts
+|-- lib
+|   |-- mock
+|   |   |-- admin-dashboard-data.ts
+|   |   +-- admin-instructors-data.ts
+|   |-- auth-actions.ts
+|   |-- dashboard-nav-config.ts
+|   |-- invitation-actions.ts
+|   |-- search-data.ts
+|   |-- settings-nav-config.ts
+|   |-- use-mobile.ts
+|   +-- utils.ts
+|-- public
+|   +-- images
+|       |-- avatars
+|       |   +-- murgo_02.jpg
+|       |-- icons
+|       |   |-- cty-i.svg
+|       |   +-- google.svg
+|       |-- illustrations
+|       |   |-- connecting-teams_nnjy.svg
+|       |   +-- Invite-cuate.svg
+|       |-- logos
+|       |   |-- cty-lvb.svg
+|       |   |-- cty-lvb-pass.svg
+|       |   |-- cty-lvw.svg
+|       |   +-- cty-lvw-pass.svg
+|       +-- patterns
+|           |-- black-orchid.png
+|           +-- brick-wall-dark.png
+|-- .gitignore
+|-- AGENTS.md
+|-- certilys-admin-panel-structure-20260527-172708.txt
+|-- CLAUDE.md
+|-- components.json
+|-- eslint.config.mjs
+|-- next.config.ts
+|-- package.json
+|-- pnpm-lock.yaml
+|-- pnpm-workspace.yaml
+|-- postcss.config.mjs
+|-- README.md
++-- tsconfig.json
