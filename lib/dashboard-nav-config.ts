@@ -8,6 +8,7 @@ import {
   Notification01Icon,
   Shield01Icon,
   InvoiceIcon,
+  UserStar01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
@@ -40,16 +41,22 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         icon: DashboardSquare01Icon,
       },
       {
+        title: "Formateurs",
+        shortTitle: "Formateurs",
+        url: "/dashboard/instructors",
+        icon: UserGroupIcon,
+      },
+      {
         title: "Formations",
         shortTitle: "Formations",
         url: "/dashboard/courses",
         icon: Book01Icon,
       },
       {
-        title: "Formateurs",
-        shortTitle: "Formateurs",
-        url: "/dashboard/instructors",
-        icon: UserGroupIcon,
+        title: "Commandes / Paiements",
+        shortTitle: "Commandes",
+        url: "/dashboard/orders",
+        icon: InvoiceIcon,
       },
       {
         title: "Utilisateurs",
@@ -58,10 +65,10 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         icon: UserMultiple02Icon,
       },
       {
-        title: "Commandes / Paiements",
-        shortTitle: "Commandes",
-        url: "/dashboard/orders",
-        icon: InvoiceIcon,
+        title: "Équipe interne",
+        shortTitle: "Équipe",
+        url: "/dashboard/team",
+        icon: UserStar01Icon,
       },
     ],
   },
