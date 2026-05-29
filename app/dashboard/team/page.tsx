@@ -378,9 +378,9 @@ export default function TeamPage() {
               <HugeiconsIcon icon={UserStar01Icon} className="size-4" size={16} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground leading-none">
+              <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.adminsCount}
-              </p>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Administrateurs</p>
             </div>
           </CardContent>
@@ -393,9 +393,9 @@ export default function TeamPage() {
               <HugeiconsIcon icon={UserGroupIcon} className="size-4" size={16} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground leading-none">
+              <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.moderatorsCount}
-              </p>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Modérateurs</p>
             </div>
           </CardContent>
@@ -408,9 +408,9 @@ export default function TeamPage() {
               <HugeiconsIcon icon={MailSendIcon} className="size-4" size={16} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground leading-none">
+              <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.pendingInvitations}
-              </p>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Invitations en attente</p>
             </div>
           </CardContent>
@@ -423,9 +423,9 @@ export default function TeamPage() {
               <HugeiconsIcon icon={UserBlock01Icon} className="size-4" size={16} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground leading-none">
+              <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.suspendedCount}
-              </p>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Comptes suspendus</p>
             </div>
           </CardContent>

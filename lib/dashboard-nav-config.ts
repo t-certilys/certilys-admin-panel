@@ -85,7 +85,7 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
       {
         title: "Logs / Audit",
         shortTitle: "Audits",
-        url: "/dashboard/logs",
+        url: "/dashboard/audit-logs",
         icon: Shield01Icon,
       },
       {
