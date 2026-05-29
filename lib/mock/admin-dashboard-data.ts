@@ -261,7 +261,7 @@ export const priorityActions: PriorityAction[] = [
     label: "Paiements à vérifier",
     count: 3,
     urgency: "warning",
-    href: "/dashboard/orders",
+    href: "/dashboard/orders?paymentStatus=PENDING",
   },
   {
     id: "acces-revoques",

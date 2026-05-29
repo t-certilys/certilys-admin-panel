@@ -219,7 +219,7 @@ function InstructorKpiCards({
   onStatusFilter: (status: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {instructorKpis.map((kpi) => {
         const Icon = KPI_ICONS[kpi.id];
         return (
@@ -282,113 +282,120 @@ function ActionDialog({
 
   return (
     <Dialog open={state.open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-            {state.type === "reject" ? (
-              <HugeiconsIcon
-                icon={Alert01Icon}
-                className="size-4 text-destructive"
-                size={16}
-                strokeWidth={1.5}
-              />
-            ) : (
-              <HugeiconsIcon
-                icon={Icon}
-                className="size-4 text-primary"
-                size={16}
-                strokeWidth={1.5}
-              />
-            )}
-            {cfg.label}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {cfg.description}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          {/* Récapitulatif formateur */}
-          <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-            <InstructorAvatar instructor={state.instructor} />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {state.instructor.fullName}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {state.instructor.email}
-              </p>
-            </div>
-            <StatusBadge status={state.instructor.status} />
-          </div>
-
-          {/* Champ motif (si requis) */}
-          {needsReason && (
-            <div className="space-y-2">
-              <Label
-                htmlFor="action-reason"
-                className="text-sm font-medium text-foreground"
-              >
-                {cfg.reasonLabel}
-                <span className="ml-1 text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="action-reason"
-                value={state.reason}
-                onChange={(e) => onReasonChange(e.target.value)}
-                placeholder={cfg.reasonPlaceholder}
-                rows={3}
-                className="resize-none text-sm"
-                disabled={state.loading}
-              />
-              {state.reason.trim().length > 0 &&
-                state.reason.trim().length < 10 && (
-                  <p className="text-xs text-destructive">
-                    Minimum 10 caractères requis.
-                  </p>
-                )}
-            </div>
-          )}
-
-          {/* Erreur */}
-          {state.error && (
-            <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-              <HugeiconsIcon
-                icon={AlertCircleIcon}
-                className="size-4 shrink-0"
-                size={16}
-                strokeWidth={1.5}
-              />
-              {state.error}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={state.loading}>
-            Annuler
-          </Button>
-          <Button
-            variant={cfg.variant}
-            onClick={onConfirm}
-            disabled={state.loading || !canConfirm}
-            id={`btn-confirm-${state.type}`}
-          >
-            {state.loading ? (
-              <>
+      <DialogContent className="w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0 border border-border/60">
+        <div className="flex max-h-[inherit] flex-col">
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 sm:px-7 text-left">
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+              {state.type === "reject" ? (
                 <HugeiconsIcon
-                  icon={Loading02Icon}
-                  className="size-4 animate-spin mr-2"
+                  icon={Alert01Icon}
+                  className="size-4 text-destructive shrink-0"
                   size={16}
                   strokeWidth={1.5}
                 />
-                En cours…
-              </>
-            ) : (
-              cfg.confirmLabel
+              ) : (
+                <HugeiconsIcon
+                  icon={Icon}
+                  className="size-4 text-primary shrink-0"
+                  size={16}
+                  strokeWidth={1.5}
+                />
+              )}
+              {cfg.label}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {cfg.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-7 sm:py-5 space-y-4">
+            {/* Récapitulatif formateur - Grid responsive à 3 colonnes */}
+            <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto] rounded-xl bg-muted/60 p-4 border border-border/40 min-w-0 overflow-hidden">
+              <div className="self-start">
+                <InstructorAvatar instructor={state.instructor} />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-semibold text-foreground truncate" title={state.instructor.fullName}>
+                  {state.instructor.fullName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate" title={state.instructor.email}>
+                  {state.instructor.email}
+                </p>
+              </div>
+              <div className="shrink-0 self-start sm:self-center">
+                <StatusBadge status={state.instructor.status} />
+              </div>
+            </div>
+
+            {/* Champ motif (si requis) */}
+            {needsReason && (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="action-reason"
+                  className="text-xs font-medium text-foreground"
+                >
+                  {cfg.reasonLabel}
+                  <span className="ml-1 text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="action-reason"
+                  value={state.reason}
+                  onChange={(e) => onReasonChange(e.target.value)}
+                  placeholder={cfg.reasonPlaceholder}
+                  rows={3}
+                  className="resize-none text-sm w-full"
+                  disabled={state.loading}
+                />
+                {state.reason.trim().length > 0 &&
+                  state.reason.trim().length < 10 && (
+                    <p className="text-xs text-destructive">
+                      Minimum 10 caractères requis (actuellement {state.reason.trim().length}).
+                    </p>
+                  )}
+              </div>
             )}
-          </Button>
-        </DialogFooter>
+
+            {/* Erreur */}
+            {state.error && (
+              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                <HugeiconsIcon
+                  icon={AlertCircleIcon}
+                  className="size-4 shrink-0"
+                  size={16}
+                  strokeWidth={1.5}
+                />
+                <span className="break-words">{state.error}</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-6 sm:px-7 sm:py-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={onClose} disabled={state.loading} className="w-full sm:w-auto">
+              Annuler
+            </Button>
+            <Button
+              variant={cfg.variant}
+              onClick={onConfirm}
+              disabled={state.loading || !canConfirm}
+              id={`btn-confirm-${state.type}`}
+              className="w-full sm:w-auto"
+            >
+              {state.loading ? (
+                <>
+                  <HugeiconsIcon
+                    icon={Loading02Icon}
+                    className="size-4 animate-spin mr-2"
+                    size={16}
+                    strokeWidth={1.5}
+                  />
+                  En cours…
+                </>
+              ) : (
+                cfg.confirmLabel
+              )}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

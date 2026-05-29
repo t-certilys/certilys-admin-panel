@@ -1227,126 +1227,132 @@ export default function CourseDetailPage() {
 
       {/* ── Dialog confirmation ──────────────────────────────────────────────── */}
       <Dialog open={dialog.open} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-              {dialog.type === "reject" ? (
-                <HugeiconsIcon
-                  icon={Alert01Icon}
-                  className="size-4 text-destructive"
-                  size={16}
-                  strokeWidth={1.5}
-                />
-              ) : (
-                <HugeiconsIcon
-                  icon={dialogCfg?.icon ?? CheckmarkSquare01Icon}
-                  className="size-4 text-primary"
-                  size={16}
-                  strokeWidth={1.5}
-                />
-              )}
-              {dialogCfg?.label}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {dialogCfg?.description}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Récapitulatif formation */}
-            <div className="flex items-start gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <HugeiconsIcon
-                  icon={Book01Icon}
-                  className="size-4 text-primary"
-                  size={16}
-                  strokeWidth={1.5}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {course.title}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {course.instructorName} · {course.category}
-                </p>
-              </div>
-              <StatusBadge status={course.status} />
-            </div>
-
-            {/* Motif (si requis) */}
-            {dialogCfg?.requiresReason && (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="action-reason-detail"
-                  className="text-sm font-medium text-foreground"
-                >
-                  {dialogCfg.reasonLabel}
-                  <span className="ml-1 text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="action-reason-detail"
-                  value={dialog.reason}
-                  onChange={(e) =>
-                    setDialog((prev) => ({ ...prev, reason: e.target.value }))
-                  }
-                  placeholder={dialogCfg.reasonPlaceholder}
-                  rows={3}
-                  className="resize-none text-sm"
-                  disabled={dialog.loading}
-                />
-                {dialog.reason.trim().length > 0 &&
-                  dialog.reason.trim().length < 10 && (
-                    <p className="text-xs text-destructive">
-                      Minimum 10 caractères requis.
-                    </p>
-                  )}
-              </div>
-            )}
-
-            {/* Erreur */}
-            {dialog.error && (
-              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-                <HugeiconsIcon
-                  icon={AlertCircleIcon}
-                  className="size-4 shrink-0"
-                  size={16}
-                  strokeWidth={1.5}
-                />
-                {dialog.error}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={closeDialog}
-              disabled={dialog.loading}
-            >
-              Annuler
-            </Button>
-            <Button
-              variant={dialogCfg?.variant ?? "default"}
-              onClick={handleConfirm}
-              disabled={dialog.loading || !canConfirmAction}
-              id={`btn-confirm-detail-${dialog.type}`}
-            >
-              {dialog.loading ? (
-                <>
+        <DialogContent className="w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0 border border-border/60">
+          <div className="flex max-h-[inherit] flex-col">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-4 sm:px-7 text-left">
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                {dialog.type === "reject" ? (
                   <HugeiconsIcon
-                    icon={Loading02Icon}
-                    className="size-4 animate-spin mr-2"
+                    icon={Alert01Icon}
+                    className="size-4 text-destructive shrink-0"
                     size={16}
                     strokeWidth={1.5}
                   />
-                  En cours…
-                </>
-              ) : (
-                dialogCfg?.confirmLabel
+                ) : (
+                  <HugeiconsIcon
+                    icon={dialogCfg?.icon ?? CheckmarkSquare01Icon}
+                    className="size-4 text-primary shrink-0"
+                    size={16}
+                    strokeWidth={1.5}
+                  />
+                )}
+                {dialogCfg?.label}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
+                {dialogCfg?.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-7 sm:py-5 space-y-4">
+              {/* Récapitulatif formation - Grid responsive à 3 colonnes */}
+              <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto] rounded-xl bg-muted/60 p-4 border border-border/40 min-w-0 overflow-hidden">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 self-start">
+                  <HugeiconsIcon
+                    icon={Book01Icon}
+                    className="size-4 text-primary"
+                    size={16}
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-foreground truncate" title={course.title}>
+                    {course.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate" title={`${course.instructorName} · ${course.category}`}>
+                    {course.instructorName} · {course.category}
+                  </p>
+                </div>
+                <div className="shrink-0 self-start sm:self-center">
+                  <StatusBadge status={course.status} />
+                </div>
+              </div>
+
+              {/* Motif (si requis) */}
+              {dialogCfg?.requiresReason && (
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="action-reason-detail"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    {dialogCfg.reasonLabel}
+                    <span className="ml-1 text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="action-reason-detail"
+                    value={dialog.reason}
+                    onChange={(e) =>
+                      setDialog((prev) => ({ ...prev, reason: e.target.value }))
+                    }
+                    placeholder={dialogCfg.reasonPlaceholder}
+                    rows={3}
+                    className="resize-none text-sm w-full"
+                    disabled={dialog.loading}
+                  />
+                  {dialog.reason.trim().length > 0 &&
+                    dialog.reason.trim().length < 10 && (
+                      <p className="text-xs text-destructive">
+                        Minimum 10 caractères requis (actuellement {dialog.reason.trim().length}).
+                      </p>
+                    )}
+                </div>
               )}
-            </Button>
-          </DialogFooter>
+
+              {/* Erreur */}
+              {dialog.error && (
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                  <HugeiconsIcon
+                    icon={AlertCircleIcon}
+                    className="size-4 shrink-0"
+                    size={16}
+                    strokeWidth={1.5}
+                  />
+                  <span className="break-words">{dialog.error}</span>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="shrink-0 border-t bg-background px-6 py-6 sm:px-7 sm:py-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={closeDialog}
+                disabled={dialog.loading}
+                className="w-full sm:w-auto"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant={dialogCfg?.variant ?? "default"}
+                onClick={handleConfirm}
+                disabled={dialog.loading || !canConfirmAction}
+                id={`btn-confirm-detail-${dialog.type}`}
+                className="w-full sm:w-auto"
+              >
+                {dialog.loading ? (
+                  <>
+                    <HugeiconsIcon
+                      icon={Loading02Icon}
+                      className="size-4 animate-spin mr-2"
+                      size={16}
+                      strokeWidth={1.5}
+                    />
+                    En cours…
+                  </>
+                ) : (
+                  dialogCfg?.confirmLabel
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

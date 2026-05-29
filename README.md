@@ -123,6 +123,123 @@ nuqs 2.8.9 — Gestion de l'état URL (query params synchronisés côté client)
 
 ---
 
+## Page Supervision des Commandes & Paiements (`/dashboard/orders`) — Ajout Mai 2026
+
+### Routes
+| Route | Fichier | Description |
+|---|---|---|
+| `/dashboard/orders` | `app/dashboard/orders/page.tsx` | Tableau de bord de supervision des commandes, paiements, commissions |
+| `/dashboard/orders/[id]` | `app/dashboard/orders/[id]/page.tsx` | Dossier administratif détaillé et événements d'une commande |
+
+### Architecture & Données Mock
+- **Fichier de Données** : `lib/mock/admin-orders-data.ts`
+  - Types : `AdminOrder`, `OrderStatus`, `PaymentStatus`, `AccessStatus`, `BillingSnapshot`, `PaymentProviderPayload`, `OrderEvent`, `OrderKpi`
+  - Statuts :
+    - Commande (`OrderStatus`) : `INITIATED | PAID | CANCELLED | EXPIRED`
+    - Paiement (`PaymentStatus`) : `PENDING | COMPLETED | FAILED | REFUNDED`
+    - Accès (`AccessStatus`) : `ACTIVE | REVOKED | EXPIRED | NOT_CREATED`
+  - Données Mock : 12+ commandes ultra-réalistes intégrant des cas d'anomalies (paiement complété sans accès provisionné) et des remboursements (accès révoqués avec motif).
+  - Devises : Les montants sont stockés en **XOF** (données d'origine) et convertis en **F CFA** dans l'UI avec un formateur régional standardisé.
+- **Gestion URL** : Synchronisation du statut de paiement avec `nuqs` (v2.8.9) via le paramètre de requête `?paymentStatus=` pour une navigation réactive et partageable.
+
+### Fonctionnalités Implémentées
+- ✅ **Header & Actions d'en-tête** :
+  - Métriques principales avec actions rapides d'Export CSV filtré.
+  - Bouton direct d'aide à la décision "Paiements à vérifier" (→ `?paymentStatus=PENDING`).
+- ✅ **KPI compacts dynamiques** (4 cartes cliquables) : CA brut global (paiements `COMPLETED`), Commission Certilys (15% du CA), Compteur des paiements complétés, et Compteur d'anomalies d'accès à vérifier (clic → `?paymentStatus=PENDING_VERIFICATION`).
+- ✅ **Recherche + Filtres de Sheet réutilisés** : Composant `SearchFilter` existant intégré.
+  - Filtres : Statut de commande, statut de paiement, statut d'accès, titre de formation, apprenant (nom/email), passerelle, période (du/au), montant minimum / maximum.
+- ✅ **Tableau de Supervision complet** (9 colonnes) : Commande (lien direct mono), Apprenant, Formation, Montant F CFA, Commission Certilys F CFA, Badge Statut Paiement, Badge Statut Accès, Date de création, Menu Décision.
+- ✅ **Dossier de Commande Ultra-détaillé (`[id]/page.tsx`)** :
+  - *1. Résumé* : ID, statuts, passerelle, dates clés, décompte financier (remise et total payé).
+  - *2. Apprenant* : Nom, e-mail, téléphone, pays, ville.
+  - *3. Formation* : Titre, formateur, prix d'origine, statut qualité.
+  - *4. Facturation figée* : Snapshot complet et immuable au moment de l'achat (NIF/TVA locale incluse).
+  - *5. Paiement (Webhook Moneroo)* : Session ID, ID transaction, date et **bloc de payload JSON brut du webhook en lecture seule joliment formaté**.
+  - *6. Accès & Inscription* : Enrollment ID, % de progression, dates d'activation et de révocation, motif de suspension.
+  - *7. Commissions* : Graphique de répartition de la commission (15% Certilys / 85% Net formateur).
+  - *8. Historique chronologique* : Fil d'Ariane chronologique retraçant tous les événements et audits survenus sur la commande.
+- ✅ **Actions Sensibles Sécurisées** :
+  - *Révoquer l'accès* : Dialogue de confirmation exigeant la saisie d'un motif d'au moins 10 caractères (Génère le log d'audit `ACCESS_REVOKED`).
+  - *Synchroniser le paiement* : Dialogue de confirmation interrogeant la passerelle pour forcer la synchronisation et résoudre automatiquement les anomalies d'enrôlement en créant l'accès actif (Génère le log `PAYMENT_SYNC_REQUESTED`).
+  - *Signaler pour vérification* : Marque la commande pour examen manuel (Génère le log `ORDER_MARKED_FOR_REVIEW`).
+- ✅ **Règles Métier strictes** :
+  - Aucun accès actif n'est autorisé ou créé si `paymentStatus !== COMPLETED` (anomalies signalées en bandeau rouge).
+  - Webhook Moneroo préservé comme source de vérité.
+- ✅ **Intégration du Dashboard** :
+  - Les redirections des blocs "Dernières commandes" mènent directement à `/dashboard/orders/[id]`.
+  - La route sidebar `/dashboard/commandes` a été migrée vers `/dashboard/orders` sans aucun badge comme exigé.
+
+---
+
+## Page Supervision des Utilisateurs (`/dashboard/users`) — Ajout Mai 2026
+
+### Routes
+| Route | Fichier | Description |
+|---|---|---|
+| `/dashboard/users` | `app/dashboard/users/page.tsx` | Liste admin de supervision des comptes utilisateurs Certilys |
+| `/dashboard/users/[id]` | `app/dashboard/users/[id]/page.tsx` | Dossier compte complet d'un utilisateur |
+
+### Architecture & Données Mock
+- **Fichier de Données** : `lib/mock/admin-users-data.ts`
+  - Types : `AdminUser`, `UserRole`, `AccountStatus`, `UserKpi`, `UserFilters`, `UserSession`, `UserSecurity`, `UserLinkedActivity`, `UserOnboarding`, `UserLinkedOrder`, `UserLinkedEnrollment`, `UserLinkedCourse`, `UserLinkedAdminAction`
+  - Rôles : `LEARNER | INSTRUCTOR | ADMIN | MODERATOR`
+  - Statuts : `ACTIVE | SUSPENDED | DELETED`
+  - 12 utilisateurs mock réalistes (pays africains + France, rôles variés, cas-limites couverts)
+- **Gestion URL** : `nuqs` — paramètre `?status=` synchronisé avec les filtres
+- **Icônes** : HugeIcons uniquement (`@hugeicons/core-free-icons`)
+
+### Fonctionnalités Implémentées — Liste (`/dashboard/users`)
+- ✅ **Header** : Titre, sous-titre, Export CSV filtré, bouton direct "Comptes suspendus" (→ `?status=SUSPENDED`)
+- ✅ **KPI compacts** (4 cartes interactives) : Total, Actifs, Suspendus, 2FA activée — cliquables
+- ✅ **Recherche + filtres** : Composant `SearchFilter` réutilisé (input + entonnoir + Sheet)
+  - Filtres : Rôle, Statut compte, Email vérifié, 2FA, Onboarding, Dernière connexion depuis
+- ✅ **Table responsive** : Avatar/initiales, nom+email, badge rôle, badge statut, email vérifié, 2FA, onboarding, dernière connexion, actions
+- ✅ **Actions rapides inline** : Voir profil, Suspendre (→ audit `USER_SUSPENDED`), Réactiver (→ audit `USER_REACTIVATED`)
+- ✅ **États UI** : Loading (Skeleton), table vide, aucun résultat, action pending (spinner)
+- ✅ **Compte DELETED** : Lecture seule — aucune action affichée
+- ✅ **Aucun badge sidebar** sur Utilisateurs (contrainte respectée)
+
+### Fonctionnalités Implémentées — Détail (`/dashboard/users/[id]`)
+- ✅ **1. Identité** : nom, email, rôle, statut, pays, timezone, avatar/initiales, date d'inscription
+- ✅ **2. Sécurité** : emailVerified, authProvider, 2FA, dernière connexion, IP, localisation
+- ✅ **3. Sessions actives** : liste des sessions avec device, IP, localisation, session courante
+- ✅ **4. Onboarding** : barre de progression, étape courante/totale, date de complétion
+- ✅ **5. Activité liée** :
+  - Commandes récentes (badge statut, montant formaté)
+  - Formations suivies / enrollments (progression, statut)
+  - Formations créées si Formateur (statut, apprenants)
+  - Actions administratives si Admin/Modérateur
+- ✅ **6. Statut compte** : bannière suspension (motif + date + responsable), bloc lecture seule si DELETED
+- ✅ **Actions sensibles avec dialog confirmé** :
+  - Suspendre → confirmation + motif min. 10 caractères → `USER_SUSPENDED`
+  - Réactiver → confirmation obligatoire → `USER_REACTIVATED`
+  - Désactiver 2FA → admin uniquement + motif min. 10 caractères → `TWO_FACTOR_DISABLED_BY_ADMIN`
+  - Pattern dialog : header fixe, body scrollable, footer fixe avec padding confortable
+- ✅ **États UI** : Loading/success/error simulés, protection compte DELETED (actions masquées)
+
+### Endpoints préparés (simulés)
+```
+GET  /admin/users
+GET  /admin/users/:id
+POST /admin/users/:id/suspend
+POST /admin/users/:id/reactivate
+POST /admin/users/:id/disable-2fa
+```
+
+### Règles Métier
+- Accès ADMIN/MODERATOR (layout dashboard existant)
+- Compte SUSPENDED = aucun accès aux fonctionnalités protégées
+- Compte DELETED = lecture seule, aucune action directe, pas de suppression physique
+- 2FA admin/modérateur ne peut être désactivée sans motif critique
+- Toute action sensible est auditée (`console.log [AUDIT]`)
+
+### Navigation Dashboard
+- Sidebar : "Utilisateurs" → `/dashboard/users` avec icône `UserMultiple02Icon` (distinct de Formateurs `UserGroupIcon`)
+- Dashboard home : "Compte suspendu récemment" → `/dashboard/users?status=SUSPENDED`
+
+---
+
 # DIGISAM — Site Web d'Agence Digitale
 
 Projet Next.js 16 avec Tailwind CSS v4 et composants coss UI.
@@ -205,6 +322,19 @@ Projet Next.js 16 avec Tailwind CSS v4 et composants coss UI.
 - ✅ **Authentification & Invitation** : Suppression définitive du sélecteur de jetons de test sur l'écran d'invitation invalide (`invitation-confirmation.tsx`), garantissant un écran d'erreur propre, sobre et parfaitement centré.
 - ✅ **Notifications** : Suppression des boutons de simulation d'états dans la page de notifications (`/dashboard/notifications`).
 - ✅ **Sécurité préservée** : Les mocks internes dans les fichiers d'actions (`auth-actions.ts` et `invitation-actions.ts`) sont conservés pour le développement sans être exposés dans l'interface finale.
+
+### Correction des Dialogs/AlertDialog Responsives — Pattern Final (Mai 2026)
+- ✅ **Pattern unifié appliqué** : Tous les `DialogContent` utilisent désormais `w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0` — ni trop étroits, ni débordants.
+- ✅ **Structure header/body/footer verrouillée** : Header et footer toujours fixes (`shrink-0`), seul le body est scrollable (`min-h-0 flex-1 overflow-y-auto`). L'`overflow-y-auto` n'est **jamais** posé sur `DialogContent`.
+- ✅ **Footer respirant** : `px-6 py-6 sm:px-7 sm:py-6 gap-3` — le footer ne colle plus au bas, les boutons s'empilent sur mobile (`w-full`) et s'alignent à droite sur desktop (`sm:w-auto`).
+- ✅ **Body aéré** : `px-6 py-5 sm:px-7 sm:py-5` — espacement interne cohérent sur toutes les tailles d'écran.
+- ✅ **Header aligné** : `px-6 pt-6 pb-4 sm:px-7` — padding horizontal élargi sur desktop pour l'alignement parfait avec body et footer.
+- ✅ **Grilles résumés** : `grid gap-3 sm:grid-cols-[auto_1fr_auto] min-w-0 overflow-hidden` — cartes d'info fluides dans tous les dialogs (commandes, formations, formateurs).
+- ✅ **Périmètre couvert** : `orders/page.tsx`, `orders/[id]/page.tsx`, `courses/page.tsx`, `courses/[id]/page.tsx`, `instructors/page.tsx`, `instructors/[id]/page.tsx` (dialog prévisualisation ID + dialog décisionnel).
+
+### Correction de la Responsivité des Cartes KPI (Mai 2026)
+- ✅ **Comportement Mobile Amélioré** : Modification de la disposition en grille (`grid-cols-2` à `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) pour permettre aux cartes KPI de s'empiler verticalement sur les très petits écrans (mobiles). Cela empêche le chevauchement et le débordement du texte, en particulier pour les montants financiers longs comme "725 000 F CFA".
+- ✅ **Périmètre couvert** : `orders/page.tsx`, `courses/page.tsx`, `instructors/page.tsx`.
 
 ### Refondu du Layout Dashboard Admin — Finalisation & Corrections UI (Mai 2026)
 - ✅ **Renommage des styles** : Passage de `auth-pattern.css` à `patterns.css` pour supporter d'autres motifs et centraliser la gestion des designs de fond.

@@ -886,175 +886,186 @@ export default function InstructorDetailPage() {
 
       {/* ── Dialog prévisualisation de pièce d'identité ───────────────────── */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="sm:max-w-[700px] h-[85vh] flex flex-col">
-          <DialogHeader className="pb-2 border-b border-border/30 shrink-0">
-            <DialogTitle className="text-base font-semibold flex items-center gap-2">
-              <HugeiconsIcon icon={EyeIcon} className="size-4 text-primary" size={16} strokeWidth={1.5} />
-              Prévisualisation : {instructor.verificationPayload?.identityDocument?.fileName}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              {getDocTypeLabel(instructor.verificationPayload?.identityDocument?.type)} ({instructor.verificationPayload?.identityDocument?.fileMimeType})
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0 border border-border/60">
+          <div className="flex max-h-[inherit] flex-col">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-4 sm:px-7 text-left border-b border-border/30">
+              <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                <HugeiconsIcon icon={EyeIcon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
+                <span className="truncate" title={instructor.verificationPayload?.identityDocument?.fileName}>
+                  Prévisualisation : {instructor.verificationPayload?.identityDocument?.fileName}
+                </span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {getDocTypeLabel(instructor.verificationPayload?.identityDocument?.type)} ({instructor.verificationPayload?.identityDocument?.fileMimeType})
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex-1 min-h-0 bg-muted/30 rounded-lg overflow-hidden relative flex items-center justify-center p-2">
-            {instructor.verificationPayload?.identityDocument?.fileMimeType === "application/pdf" ? (
-              <div className="w-full h-full flex flex-col justify-between items-center bg-card rounded-lg p-6 text-center border">
-                <HugeiconsIcon icon={InvoiceIcon} size={48} className="text-primary/70 mb-4 animate-bounce" />
-                <h3 className="text-sm font-semibold text-foreground">Prévisualisation PDF simulée</h3>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                  Les navigateurs affichent les fichiers PDF dans un visualiseur interactif intégré. En production, un composant de type iframe charge le document sécurisé depuis : <br />
-                  <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground font-mono mt-2 block break-all">
-                    {instructor.verificationPayload?.identityDocument?.fileUrl}
-                  </code>
-                </p>
-                <div className="flex items-center gap-2 mt-6">
-                  <Button variant="outline" size="sm" asChild>
-                    <a
-                      href={instructor.verificationPayload?.identityDocument?.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Ouvrir dans un nouvel onglet
-                    </a>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <a
-                      href={instructor.verificationPayload?.identityDocument?.fileUrl}
-                      download={instructor.verificationPayload?.identityDocument?.fileName}
-                    >
-                      Télécharger le fichier
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              // Simulation d'une preview d'image (ou image mockée)
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="relative border rounded-lg overflow-hidden bg-card shadow-sm p-4 max-w-sm">
-                  <div className="w-64 h-40 bg-gradient-to-tr from-muted/50 to-primary/5 flex items-center justify-center rounded border border-dashed border-border/80">
-                    <HugeiconsIcon icon={UserIcon} size={40} className="text-primary/20" />
-                  </div>
-                  <div className="text-left mt-3 space-y-1 text-xs">
-                    <p className="font-semibold text-foreground">{instructor.fullName}</p>
-                    <p className="text-muted-foreground">{getDocTypeLabel(instructor.verificationPayload?.identityDocument?.type)}</p>
-                    <p className="text-[10px] text-muted-foreground">Mock Preview Image - Certilys Admin Security</p>
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-7 sm:py-5 bg-muted/10">
+              {instructor.verificationPayload?.identityDocument?.fileMimeType === "application/pdf" ? (
+                <div className="w-full h-full flex flex-col justify-between items-center bg-card rounded-lg p-6 text-center border min-w-0 overflow-hidden">
+                  <HugeiconsIcon icon={InvoiceIcon} size={48} className="text-primary/70 mb-4 animate-bounce shrink-0" />
+                  <h3 className="text-sm font-semibold text-foreground">Prévisualisation PDF simulée</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mt-1 break-words">
+                    Les navigateurs affichent les fichiers PDF dans un visualiseur interactif intégré. En production, un composant de type iframe charge le document sécurisé depuis : <br />
+                    <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground font-mono mt-2 block break-all">
+                      {instructor.verificationPayload?.identityDocument?.fileUrl}
+                    </code>
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-center gap-2 mt-6 w-full justify-center">
+                    <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+                      <a
+                        href={instructor.verificationPayload?.identityDocument?.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Ouvrir dans un nouvel onglet
+                      </a>
+                    </Button>
+                    <Button size="sm" asChild className="w-full sm:w-auto">
+                      <a
+                        href={instructor.verificationPayload?.identityDocument?.fileUrl}
+                        download={instructor.verificationPayload?.identityDocument?.fileName}
+                      >
+                        Télécharger le fichier
+                      </a>
+                    </Button>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                // Simulation d'une preview d'image (ou image mockée)
+                <div className="flex flex-col items-center justify-center w-full text-center py-4 min-w-0 overflow-hidden">
+                  <div className="relative border rounded-lg overflow-hidden bg-card shadow-sm p-4 w-full max-w-xs min-w-0">
+                    <div className="w-full h-40 bg-gradient-to-tr from-muted/50 to-primary/5 flex items-center justify-center rounded border border-dashed border-border/80">
+                      <HugeiconsIcon icon={UserIcon} size={40} className="text-primary/20 shrink-0" />
+                    </div>
+                    <div className="text-left mt-3 space-y-1 text-xs">
+                      <p className="font-semibold text-foreground truncate">{instructor.fullName}</p>
+                      <p className="text-muted-foreground truncate">{getDocTypeLabel(instructor.verificationPayload?.identityDocument?.type)}</p>
+                      <p className="text-[10px] text-muted-foreground">Mock Preview Image - Certilys Admin Security</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="shrink-0 border-t bg-background px-6 py-6 sm:px-7 sm:py-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setPreviewOpen(false)} size="sm" className="w-full sm:w-auto">
+                Fermer
+              </Button>
+            </DialogFooter>
           </div>
-
-          <DialogFooter className="pt-2 border-t border-border/30 shrink-0">
-            <Button variant="outline" onClick={() => setPreviewOpen(false)} size="sm">
-              Fermer
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Dialog confirmation d'action décisionnelle ───────────────────── */}
       {dialog.type && (
         <Dialog open={dialog.open} onOpenChange={(o) => !o && closeDialog()}>
-          <DialogContent className="sm:max-w-[480px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-                <HugeiconsIcon
-                  icon={dialogCfg.icon}
-                  className={`size-4 ${dialog.type === "reject" ? "text-destructive" : "text-primary"}`}
-                  size={16}
-                  strokeWidth={1.5}
-                />
-                {dialogCfg.label}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {dialogCfg.description}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0 border border-border/60">
+            <div className="flex max-h-[inherit] flex-col">
+              <DialogHeader className="shrink-0 px-6 pt-6 pb-4 sm:px-7 text-left">
+                <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                  <HugeiconsIcon
+                    icon={dialogCfg.icon}
+                    className={`size-4 ${dialog.type === "reject" ? "text-destructive" : "text-primary"}`}
+                    size={16}
+                    strokeWidth={1.5}
+                  />
+                  {dialogCfg.label}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1">
+                  {dialogCfg.description}
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              {/* Récap formateur */}
-              <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-                <div
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${instructor.avatarColor}`}
-                >
-                  {instructor.initials}
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-7 sm:py-5 space-y-4">
+                {/* Récap formateur - Grid responsive à 3 colonnes */}
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto] rounded-xl bg-muted/60 p-4 border border-border/40 min-w-0 overflow-hidden">
+                  <div
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold mx-auto sm:mx-0 ${instructor.avatarColor}`}
+                  >
+                    {instructor.initials}
+                  </div>
+                  <div className="min-w-0 text-center sm:text-left space-y-0.5">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {instructor.fullName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {instructor.email}
+                    </p>
+                  </div>
+                  <div className="shrink-0 self-start sm:self-center">
+                    <StatusBadge status={instructor.status} />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {instructor.fullName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {instructor.email}
-                  </p>
-                </div>
+
+                {/* Saisie motif (obligatoire pour corrections/rejet) */}
+                {dialogCfg.requiresReason && (
+                  <div className="space-y-2">
+                    <Label htmlFor="detail-action-reason" className="text-xs font-medium text-foreground">
+                      {dialogCfg.reasonLabel}
+                      <span className="ml-1 text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="detail-action-reason"
+                      value={dialog.reason}
+                      onChange={(e) =>
+                        setDialog((prev) => ({
+                          ...prev,
+                          reason: e.target.value,
+                        }))
+                      }
+                      placeholder={dialogCfg.reasonPlaceholder}
+                      rows={3}
+                      className="resize-none text-sm w-full"
+                      disabled={dialog.loading}
+                    />
+                    {dialog.reason.trim().length > 0 &&
+                      dialog.reason.trim().length < 10 && (
+                        <p className="text-xs text-destructive">
+                          Minimum 10 caractères requis pour valider cette décision.
+                        </p>
+                      )}
+                  </div>
+                )}
+
+                {/* Zone d'erreur */}
+                {dialog.error && (
+                  <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                    <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" size={16} strokeWidth={1.5} />
+                    {dialog.error}
+                  </div>
+                )}
               </div>
 
-              {/* Saisie motif (obligatoire pour corrections/rejet) */}
-              {dialogCfg.requiresReason && (
-                <div className="space-y-2">
-                  <Label htmlFor="detail-action-reason" className="text-sm font-medium text-foreground">
-                    {dialogCfg.reasonLabel}
-                    <span className="ml-1 text-destructive">*</span>
-                  </Label>
-                  <Textarea
-                    id="detail-action-reason"
-                    value={dialog.reason}
-                    onChange={(e) =>
-                      setDialog((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                    placeholder={dialogCfg.reasonPlaceholder}
-                    rows={3}
-                    className="resize-none text-sm"
-                    disabled={dialog.loading}
-                  />
-                  {dialog.reason.trim().length > 0 &&
-                    dialog.reason.trim().length < 10 && (
-                      <p className="text-xs text-destructive">
-                        Minimum 10 caractères requis pour valider cette décision.
-                      </p>
-                    )}
-                </div>
-              )}
-
-              {/* Zone d'erreur */}
-              {dialog.error && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-                  <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" size={16} strokeWidth={1.5} />
-                  {dialog.error}
-                </div>
-              )}
+              <DialogFooter className="shrink-0 border-t bg-background px-6 py-6 sm:px-7 sm:py-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={dialog.loading}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  variant={dialogCfg.variant}
+                  onClick={handleConfirm}
+                  disabled={dialog.loading || !canConfirmAction}
+                  id={`btn-confirm-${dialog.type}`}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  {dialog.loading ? (
+                    <>
+                      <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin mr-2" size={16} strokeWidth={1.5} />
+                      En cours…
+                    </>
+                  ) : (
+                    dialogCfg.confirmLabel
+                  )}
+                </Button>
+              </DialogFooter>
             </div>
-
-            <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                onClick={closeDialog}
-                disabled={dialog.loading}
-                size="sm"
-              >
-                Annuler
-              </Button>
-              <Button
-                variant={dialogCfg.variant}
-                onClick={handleConfirm}
-                disabled={dialog.loading || !canConfirmAction}
-                id={`btn-confirm-${dialog.type}`}
-                size="sm"
-              >
-                {dialog.loading ? (
-                  <>
-                    <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin mr-2" size={16} strokeWidth={1.5} />
-                    En cours…
-                  </>
-                ) : (
-                  dialogCfg.confirmLabel
-                )}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
