@@ -7,7 +7,6 @@ import {
   MailSendIcon,
   UserBlock01Icon,
   UserCheck01Icon,
-  LockPasswordIcon,
   EyeIcon,
   Loading02Icon,
   InboxIcon,
@@ -47,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InternalProfileDialog } from "@/components/certilys-ui/dialogs";
 
 import {
   type TeamMember,
@@ -759,65 +759,24 @@ export default function TeamPage() {
       </Dialog>
 
       {/* ── 7. Dialog: Détails Profil (Voir Profil) ─────────────────────────── */}
-      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="w-[min(calc(100vw-2rem),36rem)] overflow-hidden rounded-2xl p-0 flex flex-col">
-          <DialogHeader className="px-6 py-5 border-b shrink-0 text-left">
-            <DialogTitle className="text-lg font-semibold text-foreground font-sora">
-              Profil Collaborateur Interne
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="px-6 py-6 overflow-y-auto space-y-4">
-            <div className="flex items-center gap-4 border-b border-border/40 pb-4">
-              {profileMember?.avatarUrl ? (
-                <img
-                  src={profileMember.avatarUrl}
-                  alt={profileMember.name}
-                  className="size-12 rounded-full object-cover border border-border"
-                />
-              ) : (
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <HugeiconsIcon icon={UserIcon} className="size-6" size={24} strokeWidth={1.5} />
-                </div>
-              )}
-              <div>
-                <h3 className="font-semibold text-base text-foreground leading-none">{profileMember?.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{profileMember?.email}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Rôle système</span>
-                <p className="font-medium text-foreground">{profileMember?.role === "ADMIN" ? "Administrateur" : "Modérateur"}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Statut compte</span>
-                <div className="pt-0.5">
-                  {profileMember && <StatusBadge status={profileMember.status} />}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Double Facteur (2FA)</span>
-                <div className="flex items-center gap-1.5 font-medium text-foreground">
-                  <BoolIndicator value={profileMember?.twoFactorEnabled || false} />
-                  <span>{profileMember?.twoFactorEnabled ? "Activé" : "Non configuré"}</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Dernière connexion</span>
-                <p className="font-medium text-foreground">{formatDateTime(profileMember?.lastLoginAt || null)}</p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="px-6 py-4 border-t bg-muted/20 shrink-0 flex items-center justify-end">
-            <Button size="sm" variant="ghost" onClick={() => setProfileOpen(false)}>
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InternalProfileDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        profile={
+          profileMember
+            ? {
+                name: profileMember.name,
+                email: profileMember.email,
+                avatarUrl: profileMember.avatarUrl,
+                status: profileMember.status,
+                role: profileMember.role === "ADMIN" ? "Administrateur" : "Modérateur",
+                accountStatus: profileMember.status === "ACTIVE" ? "Actif" : profileMember.status === "SUSPENDED" ? "Suspendu" : "Invitation en attente",
+                twoFactorEnabled: profileMember.twoFactorEnabled,
+                lastLogin: formatDateTime(profileMember.lastLoginAt),
+              }
+            : null
+        }
+      />
     </div>
   );
 }

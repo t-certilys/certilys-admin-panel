@@ -7,20 +7,14 @@ import {
   Download01Icon,
   Clock01Icon,
   CheckmarkCircle02Icon,
-  CancelCircleIcon,
-  Archive01Icon,
   EyeIcon,
   Alert01Icon,
-  Loading02Icon,
   AlertCircleIcon,
   InboxIcon,
   SearchRemoveIcon,
-  InvoiceIcon,
   LockKeyIcon,
   Money03Icon,
   Coins01Icon,
-  Book01Icon,
-  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -43,14 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -58,17 +44,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 
 import {
   type AdminOrder,
-  type OrderStatus,
-  type PaymentStatus,
-  type AccessStatus,
   mockOrders,
-  orderStatusConfig,
   paymentStatusConfig,
   accessStatusConfig,
   formatXOF,
@@ -129,10 +110,10 @@ const ACTION_CONFIG: Record<
     auditEvent: "ORDER_MARKED_FOR_REVIEW",
   },
   "revoke-access": {
-    label: "Révoquer l'accès à la formation",
+    label: "Révoquer l&apos;accès à la formation",
     description:
       "L'accès de l'apprenant à la formation sera immédiatement suspendu. Un motif de révocation doit être spécifié et sera communiqué à l'intéressé.",
-    confirmLabel: "Révoquer l'accès",
+    confirmLabel: "Révoquer l&apos;accès",
     requiresReason: true,
     reasonLabel: "Motif de la révocation (obligatoire)",
     reasonPlaceholder: "Expliquez précisément la raison de la révocation de l'accès (min 10 caractères)…",
@@ -403,13 +384,14 @@ export default function OrdersPage() {
   }
 
   // Traitement d'action sensible
-  async function handleConfirm() {
+  async function handleConfirm(reasonOverride?: string) {
     if (!dialog.type || !dialog.order) return;
+    const reason = reasonOverride ?? dialog.reason;
 
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, dialog.order.id, dialog.reason);
+      await simulateApiCall(dialog.type, dialog.order.id, reason);
 
       // Mise à jour de l'état réactif local
       setData((prevOrders) =>
@@ -422,7 +404,7 @@ export default function OrdersPage() {
               updated.access = {
                 ...ord.access,
                 revokedAt: new Date().toISOString(),
-                revocationReason: dialog.reason,
+                revocationReason: reason,
               };
               updated.events = [
                 {
@@ -725,14 +707,11 @@ export default function OrdersPage() {
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <button
+            <Card
               key={kpi.id}
               id={`kpi-order-${kpi.id}`}
-              type="button"
-              onClick={() => kpi.filterValue && handleFiltersApply({ ...filterValues, paymentStatus: kpi.filterValue })}
-              className="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
+              className="border-border/60 shadow-none transition-colors hover:bg-muted/20 hover:border-border h-full"
             >
-              <Card className="border-border/60 shadow-none transition-all hover:border-primary/30 hover:shadow-sm hover:-translate-y-px cursor-pointer h-full">
                 <CardContent className="flex items-center gap-3 px-4 py-3 h-full">
                   <div
                     className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${kpi.iconBg}`}
@@ -754,7 +733,6 @@ export default function OrdersPage() {
                   </div>
                 </CardContent>
               </Card>
-            </button>
           );
         })}
       </div>
@@ -961,7 +939,7 @@ export default function OrdersPage() {
                                     className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
                                     id={`revoke-action-${order.id}`}
                                   >
-                                    Révoquer l'accès
+                                    Révoquer l&apos;accès
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -983,7 +961,6 @@ export default function OrdersPage() {
         state={dialog}
         onClose={closeDialog}
         onConfirm={handleConfirm}
-        onReasonChange={(v) => setDialog((prev) => ({ ...prev, reason: v }))}
       />
     </div>
   );
@@ -997,119 +974,39 @@ function ActionDialog({
   state,
   onClose,
   onConfirm,
-  onReasonChange,
 }: {
   state: ActionDialogState;
   onClose: () => void;
-  onConfirm: () => void;
-  onReasonChange: (v: string) => void;
+  onConfirm: (reason?: string) => void;
 }) {
   if (!state.type || !state.order) return null;
   const cfg = ACTION_CONFIG[state.type];
-  const Icon = cfg.icon;
-  const needsReason = cfg.requiresReason;
-  const canConfirm = !needsReason || state.reason.trim().length >= 10;
 
   return (
-    <Dialog open={state.open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[min(calc(100vw-2rem),46rem)] max-h-[min(760px,calc(100dvh-2rem))] overflow-hidden rounded-2xl p-0 border border-border/60">
-        <div className="flex max-h-[inherit] flex-col">
-          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 sm:px-7 text-left">
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-              <HugeiconsIcon
-                icon={Icon}
-                className={`size-4 shrink-0 ${state.type === "revoke-access" ? "text-destructive" : "text-primary"}`}
-                size={16}
-                strokeWidth={1.5}
-              />
-              {cfg.label}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              {cfg.description}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-7 sm:py-5 space-y-4">
-            {/* Récapitulatif commande - Grid responsive à 3 colonnes */}
-            <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto] rounded-xl bg-muted/60 p-4 border border-border/40 min-w-0 overflow-hidden">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 self-start">
-                <HugeiconsIcon icon={InvoiceIcon} className="size-4 text-primary" size={16} strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 space-y-1">
-                <span className="text-sm font-semibold text-foreground font-mono break-all block">
-                  {state.order.id}
-                </span>
-                <p className="text-xs text-muted-foreground truncate" title={`${state.order.apprenant.name} · ${state.order.formation.title}`}>
-                  {state.order.apprenant.name} · {state.order.formation.title}
-                </p>
-              </div>
-              <div className="text-left sm:text-right shrink-0 flex flex-col justify-between sm:items-end">
-                <span className="text-sm font-bold text-foreground block tabular-nums whitespace-nowrap">
-                  {formatXOF(state.order.totalXOF)}
-                </span>
-                <span className="font-medium text-[10px] uppercase text-muted-foreground/80">
-                  {state.order.paiement.provider}
-                </span>
-              </div>
-            </div>
-
-            {/* Champ Motif (si requis) */}
-            {needsReason && (
-              <div className="space-y-2">
-                <Label htmlFor="action-reason" className="text-xs font-medium text-foreground">
-                  {cfg.reasonLabel}
-                  <span className="ml-1 text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="action-reason"
-                  value={state.reason}
-                  onChange={(e) => onReasonChange(e.target.value)}
-                  placeholder={cfg.reasonPlaceholder}
-                  rows={3}
-                  className="resize-none text-sm focus-visible:ring-1 focus-visible:ring-ring w-full"
-                  disabled={state.loading}
-                />
-                {state.reason.trim().length > 0 && state.reason.trim().length < 10 && (
-                  <p className="text-xs text-destructive">
-                    Minimum 10 caractères requis (actuellement {state.reason.trim().length}).
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Erreur */}
-            {state.error && (
-              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-                <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" size={16} strokeWidth={1.5} />
-                <span className="break-words">{state.error}</span>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="shrink-0 border-t bg-background px-6 py-6 sm:px-7 sm:py-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={onClose} disabled={state.loading} className="w-full sm:w-auto">
-              Annuler
-            </Button>
-            <Button
-              variant={cfg.variant}
-              onClick={onConfirm}
-              disabled={state.loading || !canConfirm}
-              id={`btn-confirm-${state.type}`}
-              className="w-full sm:w-auto"
-            >
-              {state.loading ? (
-                <>
-                  <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin mr-2" size={16} strokeWidth={1.5} />
-                  Traitement…
-                </>
-              ) : (
-                cfg.confirmLabel
-              )}
-            </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <DecisionDialog
+      open={state.open}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={cfg.label}
+      description={cfg.description}
+      tone={cfg.variant === "destructive" ? "danger" : state.type === "mark-review" ? "warning" : "info"}
+      profile={{
+        name: state.order.id,
+        email: `${state.order.apprenant.name} · ${state.order.formation.title}`,
+        initials: "CM",
+        status: state.type === "revoke-access" ? "danger" : state.order.paymentStatus,
+      }}
+      requireReason={cfg.requiresReason}
+      reasonLabel={cfg.reasonLabel}
+      reasonPlaceholder={cfg.reasonPlaceholder}
+      minReasonLength={10}
+      confirmLabel={cfg.confirmLabel}
+      cancelLabel="Annuler"
+      loading={state.loading}
+      error={state.error}
+      onConfirm={({ reason }) => onConfirm(reason)}
+    />
   );
 }
 

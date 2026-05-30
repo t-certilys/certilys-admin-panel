@@ -57,7 +57,7 @@ function KpiCard({ kpi }: { kpi: DashboardKpi }) {
   const color = areaColor(kpi.trendDirection);
 
   return (
-    <Card className="w-full gap-0 py-0 border-border/60 bg-card shadow-none transition-[border-color,background-color,transform] hover:border-primary/25 hover:bg-primary/[0.015] hover:-translate-y-px min-w-0 overflow-hidden">
+    <Card className="w-full gap-0 py-0 border-border/60 bg-card shadow-none transition-colors hover:bg-muted/20 hover:border-border min-w-0 overflow-hidden">
       <CardHeader className="px-4 pt-4 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground leading-none">
           {kpi.label}

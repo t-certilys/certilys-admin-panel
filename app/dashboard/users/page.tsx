@@ -96,26 +96,17 @@ const KPI_ICONS: Record<string, IconSvgElement> = {
   "2fa": LockPasswordIcon,
 };
 
-function UserKpiCards({
-  onStatusFilter,
-}: {
-  onStatusFilter: (status: string, key?: string) => void;
-}) {
+function UserKpiCards() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {userKpis.map((kpi) => {
         const Icon = KPI_ICONS[kpi.id];
         return (
-          <button
+          <Card
             key={kpi.id}
             id={`kpi-user-${kpi.id}`}
-            type="button"
-            onClick={() =>
-              onStatusFilter(kpi.filterStatus ?? "", kpi.filterKey)
-            }
-            className="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
+            className="border-border/60 shadow-none transition-colors hover:bg-muted/20 hover:border-border"
           >
-            <Card className="border-border/60 shadow-none transition-all hover:border-primary/30 hover:shadow-sm hover:-translate-y-px cursor-pointer">
               <CardContent className="flex items-center gap-3 px-4 py-3">
                 <div
                   className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${kpi.iconBg}`}
@@ -136,8 +127,7 @@ function UserKpiCards({
                   </p>
                 </div>
               </CardContent>
-            </Card>
-          </button>
+          </Card>
         );
       })}
     </div>
@@ -627,18 +617,7 @@ export default function UsersPage() {
       </div>
 
       {/* ── 2. KPI compacts ────────────────────────────────────────────────── */}
-      <UserKpiCards
-        onStatusFilter={(status, key) => {
-          if (key === "twoFactor") {
-            const newFilters = { ...filterValues, twoFactor: "true" };
-            setFilterValues(newFilters);
-          } else if (status) {
-            const newFilters = { ...filterValues, status };
-            setFilterValues(newFilters);
-            setStatusParam(status);
-          }
-        }}
-      />
+      <UserKpiCards />
 
       {/* ── 3. Recherche + filtres ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">

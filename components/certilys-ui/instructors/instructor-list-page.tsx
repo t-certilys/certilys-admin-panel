@@ -8,7 +8,7 @@ import {
   Clock01Icon,
   CheckmarkCircle02Icon,
   CancelCircleIcon,
-  Archive01Icon,
+  Rotate01Icon,
   EyeIcon,
   CheckmarkSquare01Icon,
   MessageLock01Icon,
@@ -49,16 +49,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 
 import {
-  type AdminCourseSubmission,
-  type CourseSubmissionStatus,
-  mockCourseSubmissions,
-  courseKpis,
-  courseStatusConfig,
-  COURSE_CATEGORIES,
-  COURSE_LEVELS,
+  type InstructorApplication,
+  type InstructorApplicationStatus,
+  mockInstructorApplications,
+  instructorKpis,
+  instructorStatusConfig,
+  INSTRUCTOR_SPECIALTIES,
+  INSTRUCTOR_COUNTRIES,
   formatDate,
-  formatPrice,
-} from "@/lib/mock/admin-courses-data";
+} from "@/lib/mock/admin-instructors-data";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types actions
@@ -69,7 +68,7 @@ type ActionType = "approve" | "request-changes" | "reject";
 interface ActionDialogState {
   open: boolean;
   type: ActionType | null;
-  course: AdminCourseSubmission | null;
+  instructor: InstructorApplication | null;
   reason: string;
   loading: boolean;
   error: string | null;
@@ -94,45 +93,45 @@ const ACTION_CONFIG: Record<
   }
 > = {
   approve: {
-    label: "Approuver la formation",
+    label: "Approuver le formateur",
     description:
-      "La formation sera marquée comme approuvée et pourra être publiée si le formateur est également approuvé. Cette action sera consignée dans les logs d'audit.",
+      "Le formateur sera autorisé à publier des formations sur Certilys. Cette action sera consignée dans les logs d'audit.",
     confirmLabel: "Approuver",
     requiresReason: false,
     reasonLabel: "",
     reasonPlaceholder: "",
     icon: CheckmarkSquare01Icon,
     variant: "default",
-    auditEvent: "COURSE_APPROVED",
+    auditEvent: "INSTRUCTOR_APPROVED",
   },
   "request-changes": {
     label: "Demander des corrections",
     description:
-      "Le formateur sera notifié et devra corriger la formation avant un nouvel examen.",
+      "Le formateur sera notifié et devra corriger son dossier avant un nouvel examen.",
     confirmLabel: "Envoyer la demande",
     requiresReason: true,
     reasonLabel: "Motif de la demande de correction",
     reasonPlaceholder: "Décrivez précisément les corrections attendues…",
     icon: MessageLock01Icon,
     variant: "default",
-    auditEvent: "COURSE_CHANGES_REQUESTED",
+    auditEvent: "INSTRUCTOR_CHANGES_REQUESTED",
   },
   reject: {
-    label: "Rejeter la formation",
+    label: "Rejeter la candidature",
     description:
-      "La formation sera rejetée. Cette action est consignée dans les logs d'audit.",
+      "La candidature sera définitivement rejetée. Cette action est consignée dans les logs d'audit.",
     confirmLabel: "Rejeter",
     requiresReason: true,
     reasonLabel: "Motif du rejet (obligatoire)",
     reasonPlaceholder: "Expliquez la raison du rejet…",
     icon: Cancel01Icon,
     variant: "destructive",
-    auditEvent: "COURSE_REJECTED",
+    auditEvent: "INSTRUCTOR_REJECTED",
   },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Simulation API
+// Simulation appel API
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function simulateApiCall(
@@ -146,14 +145,9 @@ async function simulateApiCall(
     throw new Error("Erreur serveur. Veuillez réessayer.");
   }
 
-  const endpointMap: Record<ActionType, string> = {
-    approve: "approve",
-    "request-changes": "request-changes",
-    reject: "reject",
-  };
-  const endpoint = `/admin/courses/submissions/${id}/${endpointMap[type]}`;
+  const endpoint = `/admin/instructor-applications/${id}/${type === "request-changes" ? "request-changes" : type === "approve" ? "approve" : "reject"}`;
   console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    courseId: id,
+    instructorId: id,
     reason,
     endpoint,
     timestamp: new Date().toISOString(),
@@ -166,8 +160,8 @@ async function simulateApiCall(
 // Badge statut
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: CourseSubmissionStatus }) {
-  const cfg = courseStatusConfig[status];
+function StatusBadge({ status }: { status: InstructorApplicationStatus }) {
+  const cfg = instructorStatusConfig[status];
   return (
     <Badge
       variant="outline"
@@ -180,25 +174,43 @@ function StatusBadge({ status }: { status: CourseSubmissionStatus }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Avatar initiales
+// ─────────────────────────────────────────────────────────────────────────────
+
+function InstructorAvatar({
+  instructor,
+}: {
+  instructor: InstructorApplication;
+}) {
+  return (
+    <div
+      className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${instructor.avatarColor}`}
+    >
+      {instructor.initials}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // KPI compacts
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KPI_ICONS: Record<string, IconSvgElement> = {
-  submitted: Clock01Icon,
+  pending: Clock01Icon,
   approved: CheckmarkCircle02Icon,
+  changes_requested: Rotate01Icon,
   rejected: CancelCircleIcon,
-  archived: Archive01Icon,
 };
 
-function CourseKpiCards() {
+function InstructorKpiCards() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {courseKpis.map((kpi) => {
+      {instructorKpis.map((kpi) => {
         const Icon = KPI_ICONS[kpi.id];
         return (
           <Card
             key={kpi.id}
-            id={`kpi-course-${kpi.id}`}
+            id={`kpi-${kpi.id}`}
             className="border-border/60 shadow-none transition-colors hover:bg-muted/20 hover:border-border"
           >
               <CardContent className="flex items-center gap-3 px-4 py-3">
@@ -229,7 +241,7 @@ function CourseKpiCards() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dialog confirmation
+// Dialog de confirmation d'action
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ActionDialog({
@@ -241,7 +253,7 @@ function ActionDialog({
   onClose: () => void;
   onConfirm: (reason?: string) => void;
 }) {
-  if (!state.type || !state.course) return null;
+  if (!state.type || !state.instructor) return null;
   const cfg = ACTION_CONFIG[state.type];
 
   return (
@@ -254,10 +266,10 @@ function ActionDialog({
       description={cfg.description}
       tone={cfg.variant === "destructive" ? "danger" : state.type === "approve" ? "success" : "info"}
       profile={{
-        name: state.course.title,
-        email: `${state.course.instructorName} · ${state.course.category}`,
-        initials: state.course.title.slice(0, 2).toUpperCase(),
-        status: state.course.status,
+        name: state.instructor.fullName,
+        email: state.instructor.email,
+        initials: state.instructor.initials,
+        status: state.instructor.status,
       }}
       requireReason={cfg.requiresReason}
       reasonLabel={cfg.reasonLabel}
@@ -267,7 +279,9 @@ function ActionDialog({
       cancelLabel="Annuler"
       loading={state.loading}
       error={state.error}
-      onConfirm={({ reason }) => onConfirm(reason)}
+      onConfirm={({ reason }) => {
+        onConfirm(reason);
+      }}
     />
   );
 }
@@ -280,7 +294,7 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
   if (type === "error") {
     return (
       <TableRow>
-        <TableCell colSpan={8}>
+        <TableCell colSpan={7}>
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
               <HugeiconsIcon
@@ -295,7 +309,7 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
                 Erreur de chargement
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Impossible de récupérer les soumissions. Veuillez rafraîchir la
+                Impossible de récupérer les candidatures. Veuillez rafraîchir la
                 page.
               </p>
             </div>
@@ -307,7 +321,7 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
   if (type === "empty") {
     return (
       <TableRow>
-        <TableCell colSpan={8}>
+        <TableCell colSpan={7}>
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-muted">
               <HugeiconsIcon
@@ -319,10 +333,10 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">
-                Aucune formation
+                Aucune candidature
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Aucune formation n&apos;a encore été soumise.
+                Aucun formateur n&apos;a encore soumis de dossier.
               </p>
             </div>
           </div>
@@ -332,7 +346,7 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
   }
   return (
     <TableRow>
-      <TableCell colSpan={8}>
+      <TableCell colSpan={7}>
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted">
             <HugeiconsIcon
@@ -347,7 +361,7 @@ function EmptyState({ type }: { type: "empty" | "no-results" | "error" }) {
               Aucun résultat
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Aucune formation ne correspond à vos critères de filtre.
+              Aucune candidature ne correspond à vos critères de filtre.
             </p>
           </div>
         </div>
@@ -364,28 +378,28 @@ function SkeletonRow() {
   return (
     <TableRow>
       <TableCell>
-        <div className="space-y-1.5">
-          <Skeleton className="h-3.5 w-44" />
-          <Skeleton className="h-3 w-28" />
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="size-8 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-3 w-36" />
+          </div>
         </div>
       </TableCell>
       <TableCell>
-        <Skeleton className="h-3.5 w-24" />
-      </TableCell>
-      <TableCell>
-        <Skeleton className="h-3.5 w-28" />
+        <Skeleton className="h-3.5 w-32" />
       </TableCell>
       <TableCell>
         <Skeleton className="h-3.5 w-20" />
-      </TableCell>
-      <TableCell>
-        <Skeleton className="h-3.5 w-16" />
       </TableCell>
       <TableCell>
         <Skeleton className="h-5 w-24 rounded-full" />
       </TableCell>
       <TableCell>
         <Skeleton className="h-3.5 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3.5 w-8" />
       </TableCell>
       <TableCell>
         <Skeleton className="h-7 w-24" />
@@ -398,7 +412,7 @@ function SkeletonRow() {
 // Page principale
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function CoursesPage() {
+export default function InstructorsPage() {
   // ── nuqs : état URL
   const [statusParam, setStatusParam] = useQueryState("status", {
     defaultValue: "",
@@ -410,16 +424,14 @@ export default function CoursesPage() {
     Record<string, string>
   >({
     status: statusParam ?? "",
-    category: "",
-    level: "",
-    instructor: "",
+    specialty: "",
+    country: "",
     submittedFrom: "",
     submittedTo: "",
-    priceMin: "",
-    priceMax: "",
+    isComplete: "",
   });
 
-  // Sync URL → filtre au montage
+  // Sync paramètre URL → filtre au montage (et quand l'URL change)
   React.useEffect(() => {
     if (statusParam) {
       setFilterValues((prev) => ({ ...prev, status: statusParam }));
@@ -438,13 +450,11 @@ export default function CoursesPage() {
   const handleFiltersReset = React.useCallback(() => {
     const empty = {
       status: "",
-      category: "",
-      level: "",
-      instructor: "",
+      specialty: "",
+      country: "",
       submittedFrom: "",
       submittedTo: "",
-      priceMin: "",
-      priceMax: "",
+      isComplete: "",
     };
     setFilterValues(empty);
     setStatusParam(null);
@@ -461,14 +471,14 @@ export default function CoursesPage() {
   const [dialog, setDialog] = React.useState<ActionDialogState>({
     open: false,
     type: null,
-    course: null,
+    instructor: null,
     reason: "",
     loading: false,
     error: null,
   });
 
-  // ── Data locale
-  const [data, setData] = React.useState(mockCourseSubmissions);
+  // ── Data locale (en prod → state géré par SWR ou React Query)
+  const [data, setData] = React.useState(mockInstructorApplications);
 
   // ── Filtrage
   const filteredData = React.useMemo(() => {
@@ -477,10 +487,10 @@ export default function CoursesPage() {
       const q = searchValue.toLowerCase().trim();
       if (
         q &&
-        !item.title.toLowerCase().includes(q) &&
-        !item.instructorName.toLowerCase().includes(q) &&
-        !item.category.toLowerCase().includes(q) &&
-        !item.slug.toLowerCase().includes(q)
+        !item.fullName.toLowerCase().includes(q) &&
+        !item.email.toLowerCase().includes(q) &&
+        !item.specialty.toLowerCase().includes(q) &&
+        !item.country.toLowerCase().includes(q)
       ) {
         return false;
       }
@@ -490,25 +500,19 @@ export default function CoursesPage() {
         return false;
       }
 
-      // Catégorie
-      if (filterValues.category && item.category !== filterValues.category) {
+      // Spécialité
+      if (filterValues.specialty && item.specialty !== filterValues.specialty) {
         return false;
       }
 
-      // Niveau
-      if (filterValues.level && item.level !== filterValues.level) {
+      // Pays
+      if (filterValues.country && item.country !== filterValues.country) {
         return false;
       }
 
-      // Formateur (recherche partielle)
-      if (
-        filterValues.instructor &&
-        !item.instructorName
-          .toLowerCase()
-          .includes(filterValues.instructor.toLowerCase())
-      ) {
-        return false;
-      }
+      // Dossier complet
+      if (filterValues.isComplete === "true" && !item.isComplete) return false;
+      if (filterValues.isComplete === "false" && item.isComplete) return false;
 
       // Période soumission
       if (filterValues.submittedFrom && item.submittedAt) {
@@ -520,26 +524,16 @@ export default function CoursesPage() {
           return false;
       }
 
-      // Prix min
-      if (filterValues.priceMin && item.price < Number(filterValues.priceMin)) {
-        return false;
-      }
-
-      // Prix max
-      if (filterValues.priceMax && item.price > Number(filterValues.priceMax)) {
-        return false;
-      }
-
       return true;
     });
   }, [data, searchValue, filterValues]);
 
   // ── Ouverture dialog
-  function openAction(type: ActionType, course: AdminCourseSubmission) {
+  function openAction(type: ActionType, instructor: InstructorApplication) {
     setDialog({
       open: true,
       type,
-      course,
+      instructor,
       reason: "",
       loading: false,
       error: null,
@@ -553,24 +547,25 @@ export default function CoursesPage() {
 
   // ── Confirmation action
   async function handleConfirm(reasonOverride?: string) {
-    if (!dialog.type || !dialog.course) return;
+    if (!dialog.type || !dialog.instructor) return;
     const reason = reasonOverride ?? dialog.reason;
 
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, dialog.course.id, reason);
+      await simulateApiCall(dialog.type, dialog.instructor.id, reason);
 
-      const newStatus: CourseSubmissionStatus =
+      // Mise à jour optimiste locale
+      const newStatus: InstructorApplicationStatus =
         dialog.type === "approve"
           ? "APPROVED"
           : dialog.type === "reject"
             ? "REJECTED"
-            : "REJECTED"; // request-changes → on garde REJECTED pour simplification mock
+            : "CHANGES_REQUESTED";
 
       setData((prev) =>
         prev.map((item) =>
-          item.id === dialog.course!.id
+          item.id === dialog.instructor!.id
             ? {
                 ...item,
                 status: newStatus,
@@ -595,23 +590,25 @@ export default function CoursesPage() {
   function handleExportCsv() {
     const headers = [
       "ID",
-      "Titre",
-      "Formateur",
-      "Catégorie",
-      "Niveau",
-      "Prix",
+      "Nom",
+      "Email",
+      "Spécialité",
+      "Pays",
       "Statut",
       "Date soumission",
+      "Formations soumises",
+      "Dossier complet",
     ];
     const rows = filteredData.map((item) => [
       item.id,
-      item.title,
-      item.instructorName,
-      item.category,
-      item.level,
-      `${item.price} ${item.currency}`,
-      courseStatusConfig[item.status].label,
+      item.fullName,
+      item.email,
+      item.specialty,
+      item.country,
+      instructorStatusConfig[item.status].label,
       formatDate(item.submittedAt),
+      item.coursesSubmitted,
+      item.isComplete ? "Oui" : "Non",
     ]);
 
     const csv = [headers, ...rows]
@@ -622,44 +619,61 @@ export default function CoursesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `certilys-formations-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `certilys-formateurs-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   // ── Filtres SearchFilter
-  const inputDateClass =
-    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
-
   const filters: FilterField[] = [
     {
       id: "status",
       label: "Statut",
       render: (value, onChange) => (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger id="sf-filter-status-course" className="w-full">
+          <SelectTrigger id="sf-filter-status" className="w-full">
             <SelectValue placeholder="Tous les statuts" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="DRAFT">Brouillon</SelectItem>
-            <SelectItem value="SUBMITTED">Soumise</SelectItem>
-            <SelectItem value="APPROVED">Approuvée</SelectItem>
-            <SelectItem value="REJECTED">Rejetée</SelectItem>
-            <SelectItem value="ARCHIVED">Archivée</SelectItem>
+            <SelectItem value="PENDING">En attente</SelectItem>
+            <SelectItem value="APPROVED">Approuvé</SelectItem>
+            <SelectItem value="CHANGES_REQUESTED">
+              Corrections demandées
+            </SelectItem>
+            <SelectItem value="REJECTED">Rejeté</SelectItem>
+            <SelectItem value="NOT_SUBMITTED">Non soumis</SelectItem>
           </SelectContent>
         </Select>
       ),
     },
     {
-      id: "category",
-      label: "Catégorie",
+      id: "specialty",
+      label: "Spécialité principale",
       render: (value, onChange) => (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger id="sf-filter-category" className="w-full">
-            <SelectValue placeholder="Toutes les catégories" />
+          <SelectTrigger id="sf-filter-specialty" className="w-full">
+            <SelectValue placeholder="Toutes les spécialités" />
           </SelectTrigger>
           <SelectContent>
-            {COURSE_CATEGORIES.map((c) => (
+            {INSTRUCTOR_SPECIALTIES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      id: "country",
+      label: "Pays",
+      render: (value, onChange) => (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger id="sf-filter-country" className="w-full">
+            <SelectValue placeholder="Tous les pays" />
+          </SelectTrigger>
+          <SelectContent>
+            {INSTRUCTOR_COUNTRIES.map((c) => (
               <SelectItem key={c} value={c}>
                 {c}
               </SelectItem>
@@ -669,92 +683,44 @@ export default function CoursesPage() {
       ),
     },
     {
-      id: "level",
-      label: "Niveau",
-      render: (value, onChange) => (
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger id="sf-filter-level" className="w-full">
-            <SelectValue placeholder="Tous les niveaux" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="BEGINNER">Débutant</SelectItem>
-            <SelectItem value="INTERMEDIATE">Intermédiaire</SelectItem>
-            <SelectItem value="ADVANCED">Avancé</SelectItem>
-            <SelectItem value="ALL_LEVELS">Tous niveaux</SelectItem>
-          </SelectContent>
-        </Select>
-      ),
-    },
-    {
-      id: "instructor",
-      label: "Formateur",
-      render: (value, onChange) => (
-        <input
-          id="sf-filter-instructor"
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Nom du formateur…"
-          className={inputDateClass}
-        />
-      ),
-    },
-    {
       id: "submittedFrom",
       label: "Soumis depuis",
       render: (value, onChange) => (
         <input
-          id="sf-filter-submittedFrom-course"
+          id="sf-filter-submittedFrom"
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={inputDateClass}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       ),
     },
     {
       id: "submittedTo",
-      label: "Soumis jusqu&apos;au",
+      label: "Soumis jusqu'au",
       render: (value, onChange) => (
         <input
-          id="sf-filter-submittedTo-course"
+          id="sf-filter-submittedTo"
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={inputDateClass}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       ),
     },
     {
-      id: "priceMin",
-      label: "Prix minimum",
+      id: "isComplete",
+      label: "Dossier complet",
       render: (value, onChange) => (
-        <input
-          id="sf-filter-priceMin"
-          type="number"
-          min="0"
-          step="1000"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="0"
-          className={inputDateClass}
-        />
-      ),
-    },
-    {
-      id: "priceMax",
-      label: "Prix maximum",
-      render: (value, onChange) => (
-        <input
-          id="sf-filter-priceMax"
-          type="number"
-          min="0"
-          step="1000"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="100000"
-          className={inputDateClass}
-        />
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger id="sf-filter-isComplete" className="w-full">
+            <SelectValue placeholder="Tous les dossiers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">Oui — Dossier complet</SelectItem>
+            <SelectItem value="false">Non — Dossier incomplet</SelectItem>
+          </SelectContent>
+        </Select>
       ),
     },
   ];
@@ -771,21 +737,21 @@ export default function CoursesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground font-sora">
-            Formations
+            Formateurs
           </h1>
           <p className="text-sm text-muted-foreground max-w-xl">
-            Validation des formations soumises avant publication.
+            Validation et suivi des profils formateurs Certilys.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <Button
-            id="btn-export-csv-courses"
+            id="btn-export-csv"
             variant="outline"
             size="sm"
             className="gap-2 border-border text-foreground hover:bg-muted"
             onClick={handleExportCsv}
-            aria-label="Exporter les formations au format CSV"
+            aria-label="Exporter les candidatures au format CSV"
           >
             <HugeiconsIcon
               icon={Download01Icon}
@@ -797,18 +763,13 @@ export default function CoursesPage() {
             <span>Exporter CSV</span>
           </Button>
 
-          <Button
-            id="btn-formations-soumises"
-            asChild
-            size="sm"
-            className="gap-2"
-          >
+          <Button id="btn-dossiers-attente" asChild size="sm" className="gap-2">
             <Link
-              href="/dashboard/courses?status=SUBMITTED"
-              aria-label="Voir les formations en attente de validation"
+              href="/dashboard/instructors?status=PENDING"
+              aria-label="Voir les dossiers formateurs en attente de validation"
               onClick={() => {
-                setStatusParam("SUBMITTED");
-                setFilterValues((prev) => ({ ...prev, status: "SUBMITTED" }));
+                setStatusParam("PENDING");
+                setFilterValues((prev) => ({ ...prev, status: "PENDING" }));
               }}
             >
               <HugeiconsIcon
@@ -818,26 +779,26 @@ export default function CoursesPage() {
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
-              <span>Formations soumises</span>
+              <span>Dossiers en attente</span>
             </Link>
           </Button>
         </div>
       </div>
 
       {/* ── 2. KPI compacts ────────────────────────────────────────────────── */}
-      <CourseKpiCards />
+      <InstructorKpiCards />
 
       {/* ── 3. Recherche + filtres ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <SearchFilter
-          placeholder="Rechercher une formation, formateur, catégorie…"
+          placeholder="Rechercher un formateur, spécialité, pays…"
           searchValue={searchValue}
           onSearchChange={setSearchValue}
           filters={filters}
           filterValues={filterValues}
           onFiltersApply={handleFiltersApply}
           onFiltersReset={handleFiltersReset}
-          sheetTitle="Filtrer les formations"
+          sheetTitle="Filtrer les formateurs"
           className="w-full max-w-sm"
         />
         {activeFilterCount > 0 && (
@@ -853,14 +814,17 @@ export default function CoursesPage() {
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="min-w-[220px]">Formation</TableHead>
-              <TableHead className="min-w-[140px]">Formateur</TableHead>
-              <TableHead className="min-w-[140px]">Catégorie</TableHead>
-              <TableHead className="min-w-[110px]">Niveau</TableHead>
-              <TableHead className="min-w-[100px]">Prix</TableHead>
-              <TableHead className="min-w-[130px]">Statut</TableHead>
-              <TableHead className="min-w-[140px]">Date soumission</TableHead>
-              <TableHead className="min-w-[180px] text-right">
+              <TableHead className="min-w-[200px]">Formateur</TableHead>
+              <TableHead className="min-w-[160px]">Spécialité</TableHead>
+              <TableHead className="min-w-[120px]">Pays</TableHead>
+              <TableHead className="min-w-[160px]">Statut</TableHead>
+              <TableHead className="min-w-[140px]">
+                Date de soumission
+              </TableHead>
+              <TableHead className="min-w-[80px] text-center">
+                Formations soumises
+              </TableHead>
+              <TableHead className="min-w-[160px] text-right">
                 Décision
               </TableHead>
             </TableRow>
@@ -878,69 +842,55 @@ export default function CoursesPage() {
 
             {!loading &&
               hasResults &&
-              filteredData.map((course) => (
+              filteredData.map((instructor) => (
                 <TableRow
-                  key={course.id}
+                  key={instructor.id}
                   className="group hover:bg-muted/30 transition-colors"
                 >
-                  {/* Formation */}
+                  {/* Formateur */}
                   <TableCell>
                     <Link
-                      href={`/dashboard/courses/${course.id}`}
-                      id={`course-row-${course.id}`}
-                      className="block min-w-0 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded"
+                      href={`/dashboard/instructors/${instructor.id}`}
+                      id={`instructor-row-${instructor.id}`}
+                      className="flex items-center gap-2.5 min-w-0 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded"
                     >
-                      <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                        {course.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[200px] mt-0.5">
-                        {course.slug}
-                      </p>
+                      <InstructorAvatar instructor={instructor} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {instructor.fullName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {instructor.email}
+                        </p>
+                      </div>
                     </Link>
                   </TableCell>
 
-                  {/* Formateur */}
-                  <TableCell>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${course.instructorAvatarColor}`}
-                      >
-                        {course.instructorInitials}
-                      </div>
-                      <span className="text-sm text-foreground truncate">
-                        {course.instructorName}
-                      </span>
-                    </div>
-                  </TableCell>
-
-                  {/* Catégorie */}
+                  {/* Spécialité */}
                   <TableCell className="text-sm text-foreground">
-                    {course.category}
+                    {instructor.specialty}
                   </TableCell>
 
-                  {/* Niveau */}
+                  {/* Pays */}
                   <TableCell className="text-sm text-foreground">
-                    {COURSE_LEVELS[course.level]}
-                  </TableCell>
-
-                  {/* Prix */}
-                  <TableCell className="text-sm text-foreground tabular-nums">
-                    {formatPrice(course.price, course.currency)}
-                    {course.promoPrice && (
-                      <span className="block text-xs text-emerald-600 tabular-nums">
-                        Promo: {formatPrice(course.promoPrice, course.currency)}
-                      </span>
-                    )}
+                    {instructor.country}
                   </TableCell>
 
                   {/* Statut */}
                   <TableCell>
-                    <StatusBadge status={course.status} />
+                    <StatusBadge status={instructor.status} />
                   </TableCell>
 
                   {/* Date soumission */}
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(course.submittedAt)}
+                    {formatDate(instructor.submittedAt)}
+                  </TableCell>
+
+                  {/* Formations soumises */}
+                  <TableCell className="text-center">
+                    <span className="text-sm font-medium text-foreground">
+                      {instructor.coursesSubmitted}
+                    </span>
                   </TableCell>
 
                   {/* Actions */}
@@ -954,9 +904,9 @@ export default function CoursesPage() {
                         asChild
                       >
                         <Link
-                          href={`/dashboard/courses/${course.id}`}
-                          id={`btn-view-course-${course.id}`}
-                          aria-label={`Voir le dossier de ${course.title}`}
+                          href={`/dashboard/instructors/${instructor.id}`}
+                          id={`btn-view-${instructor.id}`}
+                          aria-label={`Voir le dossier de ${instructor.fullName}`}
                         >
                           <HugeiconsIcon
                             icon={EyeIcon}
@@ -975,15 +925,15 @@ export default function CoursesPage() {
                             variant="ghost"
                             size="sm"
                             className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-                            aria-label={`Actions pour ${course.title}`}
-                            id={`btn-actions-course-${course.id}`}
+                            aria-label={`Actions pour ${instructor.fullName}`}
+                            id={`btn-actions-${instructor.id}`}
                           >
                             Décider
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuItem
-                            onClick={() => openAction("approve", course)}
+                            onClick={() => openAction("approve", instructor)}
                             className="gap-2"
                           >
                             <HugeiconsIcon
@@ -995,7 +945,9 @@ export default function CoursesPage() {
                             Approuver
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => openAction("request-changes", course)}
+                            onClick={() =>
+                              openAction("request-changes", instructor)
+                            }
                             className="gap-2"
                           >
                             <HugeiconsIcon
@@ -1008,7 +960,7 @@ export default function CoursesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => openAction("reject", course)}
+                            onClick={() => openAction("reject", instructor)}
                             variant="destructive"
                             className="gap-2"
                           >
@@ -1030,7 +982,7 @@ export default function CoursesPage() {
         </Table>
       </div>
 
-      {/* ── Dialog confirmation ─────────────────────────────────────────────── */}
+      {/* ── Dialog confirmation ──────────────────────────────────────────────── */}
       <ActionDialog
         state={dialog}
         onClose={closeDialog}
