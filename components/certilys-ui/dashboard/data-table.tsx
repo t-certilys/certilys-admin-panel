@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  Alert01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
   CheckmarkCircle02Icon,
@@ -16,15 +15,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { AppDialog, DecisionDialog } from "@/components/certilys-ui/dialogs"
 import {
   ChartContainer,
   ChartTooltip,
@@ -260,68 +251,53 @@ function TableRowActions({ item }: { item: DataRow }) {
       </DropdownMenu>
 
       {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Row</DialogTitle>
-            <DialogDescription>
-              Make changes to the data row here.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody className="space-y-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.header} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="type">Type</Label>
-                <Input id="type" defaultValue={item.type} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="reviewer">Reviewer</Label>
-                <Input id="reviewer" defaultValue={item.reviewer} />
-              </div>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+      <AppDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        size="md"
+        title="Edit Row"
+        description="Make changes to the data row here."
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button onClick={() => setShowEditDialog(false)}>
+            <Button onClick={() => setShowEditDialog(false)} className="w-full sm:w-auto">
               Save Changes
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="header">Header</Label>
+            <Input id="header" defaultValue={item.header} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="type">Type</Label>
+              <Input id="type" defaultValue={item.type} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="reviewer">Reviewer</Label>
+              <Input id="reviewer" defaultValue={item.reviewer} />
+            </div>
+          </div>
+        </div>
+      </AppDialog>
 
       {/* Delete Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={Alert01Icon} size={20} className="text-destructive" strokeWidth={1.5} />
-              Delete Row
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this row? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody className="py-2">
-            <div className="rounded-lg bg-muted/50 p-3 text-sm italic">
-              « {item.header} » will be permanently removed.
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(false)}>
-              Delete Row
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DecisionDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Row"
+        description="Are you sure you want to delete this row? This action cannot be undone."
+        tone="danger"
+        profile={{ name: item.header, subtitle: "Data row", initials: "DR", status: "danger" }}
+        confirmLabel="Delete Row"
+        cancelLabel="Cancel"
+        onConfirm={() => setShowDeleteDialog(false)}
+      />
     </>
   )
 }

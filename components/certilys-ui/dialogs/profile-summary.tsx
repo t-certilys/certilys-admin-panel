@@ -25,19 +25,27 @@ export interface ProfileSummaryProps {
   className?: string;
 }
 
-const statusDotClass = (status?: ProfileStatusTone) => {
+export function getProfileStatusIndicatorClass(status?: ProfileStatusTone) {
   const normalized = String(status ?? "info").toLowerCase();
-  if (["active", "approved", "success", "enabled"].some((key) => normalized.includes(key))) {
+
+  if (["active", "approved", "success", "completed", "paid", "enabled"].some((key) => normalized.includes(key))) {
     return "bg-emerald-500";
   }
-  if (["rejected", "suspended", "revoked", "danger", "blocked", "delete"].some((key) => normalized.includes(key))) {
-    return "bg-red-500";
+
+  if (["pending", "submitted", "waiting", "invited", "review"].some((key) => normalized.includes(key))) {
+    return "bg-amber-500";
   }
-  if (["pending", "submitted", "waiting"].some((key) => normalized.includes(key))) {
-    return "bg-orange-500";
+
+  if (["rejected", "suspended", "revoked", "danger", "blocked", "delete", "failed"].some((key) => normalized.includes(key))) {
+    return "bg-chart-4";
   }
-  return "bg-blue-500";
-};
+
+  if (["correction", "changes", "info", "sync", "initiated"].some((key) => normalized.includes(key))) {
+    return "bg-primary";
+  }
+
+  return "bg-muted-foreground";
+}
 
 const fallbackInitials = (name: string) =>
   name
@@ -86,7 +94,7 @@ export function ProfileSummary({
           className={cn(
             "absolute bottom-0 right-0 rounded-full border-2 border-background",
             isSmall ? "size-2.5" : "size-3",
-            statusDotClass(status),
+            getProfileStatusIndicatorClass(status),
           )}
         />
       </div>
