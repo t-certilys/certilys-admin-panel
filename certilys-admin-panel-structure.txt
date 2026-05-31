@@ -1,7 +1,7 @@
 ﻿certilys-admin-panel
-Generated : 2026-05-28 19:09:41
+Generated : 2026-05-31 13:28:53
 Root      : C:\Users\HP\Desktop\mes-dossiers\dev-workspace\_local-projects\_leonardo\certilys\certilys-admin-panel
-Files     : 222
+Files     : 258
 ================================================================================
 
 .
@@ -22,6 +22,12 @@ Files     : 222
 |   |   +-- verify-otp
 |   |       +-- page.tsx
 |   |-- dashboard
+|   |   |-- audit-logs
+|   |   |   +-- page.tsx
+|   |   |-- courses
+|   |   |   |-- [id]
+|   |   |   |   +-- page.tsx
+|   |   |   +-- page.tsx
 |   |   |-- courses-db
 |   |   |   +-- page.tsx
 |   |   |-- help
@@ -32,7 +38,15 @@ Files     : 222
 |   |   |   +-- page.tsx
 |   |   |-- notifications
 |   |   |   +-- page.tsx
+|   |   |-- orders
+|   |   |   |-- [id]
+|   |   |   |   +-- page.tsx
+|   |   |   +-- page.tsx
 |   |   |-- team
+|   |   |   +-- page.tsx
+|   |   |-- users
+|   |   |   |-- [id]
+|   |   |   |   +-- page.tsx
 |   |   |   +-- page.tsx
 |   |   |-- data.json
 |   |   |-- layout.tsx
@@ -58,6 +72,9 @@ Files     : 222
 |   +-- page.tsx
 |-- components
 |   |-- certilys-ui
+|   |   |-- audit-logs
+|   |   |   |-- audit-logs-page.tsx
+|   |   |   +-- index.ts
 |   |   |-- authentication
 |   |   |   |-- forgot-password.tsx
 |   |   |   |-- forgot-password-form.tsx
@@ -71,6 +88,10 @@ Files     : 222
 |   |   |   |-- two-factor-setup-form.tsx
 |   |   |   |-- verify-otp.tsx
 |   |   |   +-- verify-otp-form.tsx
+|   |   |-- courses
+|   |   |   |-- course-detail-page.tsx
+|   |   |   |-- courses-page.tsx
+|   |   |   +-- index.ts
 |   |   |-- dashboard
 |   |   |   |-- admin-dashboard-header.tsx
 |   |   |   |-- chart-area-content.tsx
@@ -88,6 +109,24 @@ Files     : 222
 |   |   |   |-- shortcuts-list.tsx
 |   |   |   |-- site-header.tsx
 |   |   |   +-- validation-chart.tsx
+|   |   |-- dialogs
+|   |   |   |-- app-dialog.tsx
+|   |   |   |-- decision-dialog.tsx
+|   |   |   |-- document-preview-dialog.tsx
+|   |   |   |-- index.ts
+|   |   |   |-- internal-profile-dialog.tsx
+|   |   |   +-- profile-summary.tsx
+|   |   |-- instructors
+|   |   |   |-- index.ts
+|   |   |   |-- instructor-detail-page.tsx
+|   |   |   +-- instructor-list-page.tsx
+|   |   |-- notifications
+|   |   |   |-- index.ts
+|   |   |   +-- notifications-page.tsx
+|   |   |-- orders
+|   |   |   |-- index.ts
+|   |   |   |-- order-detail-page.tsx
+|   |   |   +-- orders-page.tsx
 |   |   |-- settings
 |   |   |   |-- billing
 |   |   |   |   +-- payment-methods.tsx
@@ -96,6 +135,13 @@ Files     : 222
 |   |   |   |-- settings-header.tsx
 |   |   |   |-- settings-layout.tsx
 |   |   |   +-- settings-sidebar.tsx
+|   |   |-- team
+|   |   |   |-- index.ts
+|   |   |   +-- team-page.tsx
+|   |   |-- users
+|   |   |   |-- index.ts
+|   |   |   |-- user-detail-page.tsx
+|   |   |   +-- users-page.tsx
 |   |   |-- bento-grid.tsx
 |   |   +-- logo.tsx
 |   |-- charts
@@ -232,8 +278,13 @@ Files     : 222
 |   +-- sessions-series.ts
 |-- lib
 |   |-- mock
+|   |   |-- admin-audit-logs-data.ts
+|   |   |-- admin-courses-data.ts
 |   |   |-- admin-dashboard-data.ts
-|   |   +-- admin-instructors-data.ts
+|   |   |-- admin-instructors-data.ts
+|   |   |-- admin-orders-data.ts
+|   |   |-- admin-team-data.ts
+|   |   +-- admin-users-data.ts
 |   |-- auth-actions.ts
 |   |-- dashboard-nav-config.ts
 |   |-- invitation-actions.ts
@@ -261,7 +312,7 @@ Files     : 222
 |           +-- brick-wall-dark.png
 |-- .gitignore
 |-- AGENTS.md
-|-- certilys-admin-panel-structure-20260527-172708.txt
+|-- certilys-admin-panel-structure-20260528-190940.txt
 |-- CLAUDE.md
 |-- components.json
 |-- eslint.config.mjs
