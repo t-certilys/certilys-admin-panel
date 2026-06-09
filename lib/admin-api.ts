@@ -19,7 +19,10 @@ export class AdminApiError extends Error {
   }
 }
 
-export async function adminGet<T>(path: string): Promise<T> {
+export async function adminGet<T>(
+  path: string,
+  options: { storeCookies?: boolean } = {},
+): Promise<T> {
   const response = await fetch(`${BACKEND_URL}${path}`, {
     method: "GET",
     headers: {
@@ -27,7 +30,9 @@ export async function adminGet<T>(path: string): Promise<T> {
     },
     cache: "no-store",
   });
-  await storeResponseCookies(response);
+  if (options.storeCookies) {
+    await storeResponseCookies(response);
+  }
   return parseResponse<T>(response);
 }
 

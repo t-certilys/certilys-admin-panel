@@ -90,9 +90,15 @@ export async function googleCallbackAction(
   }
 }
 
-export async function completeGoogleCallbackAction(): Promise<AuthVerifyResponse> {
+export async function completeGoogleCallbackAction(
+  code: string,
+  state: string,
+): Promise<AuthVerifyResponse> {
   return withAdminError(() =>
-    adminMutation<AuthVerifyResponse>("/admin/auth/google/complete"),
+    adminMutation<AuthVerifyResponse>("/admin/auth/google/complete", {
+      code,
+      state,
+    }),
   );
 }
 

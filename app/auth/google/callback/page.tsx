@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { completeGoogleCallbackAction } from "@/lib/auth-actions";
 
 export default function AdminGoogleCallbackPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminGoogleCallbackContent />
+    </Suspense>
+  );
+}
+
+function AdminGoogleCallbackContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     let active = true;
 
     async function complete() {
-      const response = await completeGoogleCallbackAction();
+      const code = searchParams.get("code");
+      const state = searchParams.get("state");
+      if (!code || !state) {
+        router.replace("/auth/login?error=Connexion%20Google%20impossible.");
+        return;
+      }
+
+      const response = await completeGoogleCallbackAction(code, state);
       if (!active) return;
 
       if (!response.success) {
@@ -41,7 +57,7 @@ export default function AdminGoogleCallbackPage() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   return null;
 }
