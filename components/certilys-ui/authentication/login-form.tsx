@@ -77,7 +77,12 @@ export const LoginForm = () => {
         } else if (response.status === "REQUIRES_2FA") {
           router.push(`/auth/2fa?challengeId=${response.challengeId}`);
         } else {
-          router.push(response.redirectTo || "/dashboard");
+          const target = response.redirectTo || "/dashboard";
+          if (target.startsWith("http")) {
+            window.location.assign(target);
+          } else {
+            router.push(target);
+          }
         }
       } else {
         setErrorMessage(response.message);

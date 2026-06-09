@@ -19,7 +19,7 @@ export interface IdentityDocument {
 }
 
 export interface VerificationPayload {
-  legalStatus: "INDIVIDUAL" | "COMPANY";
+  legalStatus: "INDIVIDUAL" | "ORGANIZATION" | "COMPANY";
   legalLastName: string;
   legalFirstNames: string;
   nationality: string;
