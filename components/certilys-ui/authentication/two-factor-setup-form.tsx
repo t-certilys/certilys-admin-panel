@@ -40,6 +40,7 @@ export default function TwoFactorSetupForm() {
   const [secretKey, setSecretKey] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [isActivated, setIsActivated] = useState(false);
+  const [redirectTo, setRedirectTo] = useState("/dashboard");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm({
@@ -106,6 +107,7 @@ export default function TwoFactorSetupForm() {
       if (response.success) {
         toast.success("Double Facteur (2FA) configuré avec succès !");
         setBackupCodes(response.backupCodes ?? []);
+        setRedirectTo(response.redirectTo || "/dashboard");
         setIsActivated(true);
       } else {
         setErrorMessage(response.message || "Code incorrect.");
@@ -242,7 +244,7 @@ export default function TwoFactorSetupForm() {
                       <Button
                         type="button"
                         className="w-full text-xs font-semibold"
-                        onClick={() => router.push("/dashboard")}
+                        onClick={() => router.push(redirectTo)}
                       >
                         Continuer vers le dashboard
                       </Button>
