@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
   type AccountStatus,
@@ -439,17 +440,11 @@ export default function UsersPage() {
       user.security.lastLoginAt ?? "—",
     ]);
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `certilys-utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsvForExcel(
+      `certilys-utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
   }
 
   // ── Filtres SearchFilter

@@ -72,15 +72,21 @@ export function DocumentPreviewDialog({
           {kind === "image" && url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={url} alt={fileName} className="max-h-[60dvh] max-w-full rounded-xl object-contain" />
+          ) : kind === "pdf" && url ? (
+            <iframe
+              title={`Prévisualisation ${fileName}`}
+              src={url}
+              className="h-[60dvh] min-h-[24rem] w-full rounded-xl border-0 bg-white"
+            />
           ) : kind === "pdf" ? (
             <div className="flex max-w-md flex-col items-center gap-3 text-center">
               <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <HugeiconsIcon icon={File01Icon} size={28} strokeWidth={1.5} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Aperçu PDF prêt à être intégré</p>
+                <p className="text-sm font-semibold text-foreground">Document PDF indisponible</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Le document PDF est identifié. Cette zone peut accueillir l’iframe de prévisualisation.
+                  Le lien temporaire n&apos;a pas pu être préparé. Fermez puis rouvrez cette prévisualisation.
                 </p>
               </div>
             </div>

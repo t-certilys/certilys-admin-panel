@@ -2,7 +2,6 @@
 
 import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
 import type {
-  IdentityDocument,
   InstructorApplication,
   InstructorApplicationStatus,
   VerificationPayload,
@@ -32,16 +31,6 @@ type ApplicationsResponse = {
   applications: BackendInstructorApplication[];
 };
 
-type DocumentUrlResponse = {
-  document: {
-    url: string;
-    expiresInSeconds: number;
-    type: IdentityDocument["type"];
-    fileMimeType: IdentityDocument["fileMimeType"];
-    fileSize: number;
-  };
-};
-
 export async function getInstructorApplicationsAction(
   status?: string,
 ): Promise<InstructorApplication[]> {
@@ -61,17 +50,12 @@ export async function getInstructorApplicationAction(
     );
     const application = mapApplication(response.application);
     if (response.application.documentAccess?.endpoint) {
-      try {
-        const document = await adminGet<DocumentUrlResponse>(
-          response.application.documentAccess.endpoint,
-        );
-        application.verificationPayload = withDocumentUrl(
-          application.verificationPayload,
-          document.document.url,
-        );
-      } catch {
-        // The detail page keeps its existing missing-document/error states.
-      }
+      application.verificationPayload = withDocumentUrl(
+        application.verificationPayload,
+        `/api/admin/instructor-documents/${encodeURIComponent(
+          response.application.id,
+        )}`,
+      );
     }
     return application;
   } catch (error) {
@@ -86,9 +70,10 @@ export async function approveInstructorApplicationAction(
   id: string,
   notes?: string,
 ): Promise<InstructorApplication> {
+  const trimmedNotes = notes?.trim();
   const response = await adminMutation<ApplicationResponse>(
     `/admin/instructor-applications/${encodeURIComponent(id)}/approve`,
-    { notes },
+    trimmedNotes ? { notes: trimmedNotes } : {},
   );
   return mapApplication(response.application);
 }
@@ -99,7 +84,7 @@ export async function rejectInstructorApplicationAction(
 ): Promise<InstructorApplication> {
   const response = await adminMutation<ApplicationResponse>(
     `/admin/instructor-applications/${encodeURIComponent(id)}/reject`,
-    { reason },
+    { reason: reason.trim() },
   );
   return mapApplication(response.application);
 }
@@ -110,7 +95,7 @@ export async function requestInstructorChangesAction(
 ): Promise<InstructorApplication> {
   const response = await adminMutation<ApplicationResponse>(
     `/admin/instructor-applications/${encodeURIComponent(id)}/request-changes`,
-    { requestedChanges },
+    { requestedChanges: requestedChanges.trim() },
   );
   return mapApplication(response.application);
 }

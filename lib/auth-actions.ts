@@ -37,6 +37,7 @@ export type AuthVerifyResponse = {
   method?: "TOTP" | "BACKUP_CODE";
   setupToken?: string;
   redirectTo?: string;
+  backupCodes?: string[];
 };
 
 export type TwoFactorSetupResponse = {

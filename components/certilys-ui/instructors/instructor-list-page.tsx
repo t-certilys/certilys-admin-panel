@@ -47,6 +47,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
   type InstructorApplication,
@@ -150,6 +151,10 @@ async function submitInstructorDecision(
     return rejectInstructorApplicationAction(id, reason ?? "");
   }
   return requestInstructorChangesAction(id, reason ?? "");
+}
+
+function isReviewableApplication(status: InstructorApplicationStatus) {
+  return status === "PENDING";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -576,6 +581,8 @@ export default function InstructorsPage() {
 
   // ── Ouverture dialog
   function openAction(type: ActionType, instructor: InstructorApplication) {
+    if (!isReviewableApplication(instructor.status)) return;
+
     setDialog({
       open: true,
       type,
@@ -646,17 +653,11 @@ export default function InstructorsPage() {
       item.isComplete ? "Oui" : "Non",
     ]);
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `certilys-formateurs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsvForExcel(
+      `certilys-formateurs-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
   }
 
   // ── Filtres SearchFilter
@@ -879,11 +880,14 @@ export default function InstructorsPage() {
             {!loading &&
               !loadError &&
               hasResults &&
-              filteredData.map((instructor) => (
-                <TableRow
-                  key={instructor.id}
-                  className="group hover:bg-muted/30 transition-colors"
-                >
+              filteredData.map((instructor) => {
+                const canDecide = isReviewableApplication(instructor.status);
+
+                return (
+                  <TableRow
+                    key={instructor.id}
+                    className="group hover:bg-muted/30 transition-colors"
+                  >
                   {/* Formateur */}
                   <TableCell>
                     <Link
@@ -956,7 +960,8 @@ export default function InstructorsPage() {
                       </Button>
 
                       {/* Menu actions */}
-                      <DropdownMenu>
+                      {canDecide ? (
+                        <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
@@ -1011,10 +1016,20 @@ export default function InstructorsPage() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+                          disabled
+                        >
+                          Décision prise
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
           </TableBody>
         </Table>
       </div>

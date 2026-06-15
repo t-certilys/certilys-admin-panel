@@ -164,6 +164,10 @@ async function submitInstructorDecision(
   return requestInstructorChangesAction(id, reason ?? "");
 }
 
+function isReviewableApplication(status: InstructorApplicationStatus) {
+  return status === "PENDING";
+}
+
 function StatusBadge({ status }: { status: InstructorApplicationStatus }) {
   const cfg = instructorStatusConfig[status];
   return (
@@ -229,6 +233,8 @@ export default function InstructorDetailPage() {
   });
 
   function openAction(type: ActionType) {
+    if (!instructor || !isReviewableApplication(instructor.status)) return;
+
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -318,6 +324,7 @@ export default function InstructorDetailPage() {
     !completeness?.hasAddress ||
     !completeness?.hasIdentityDocument ||
     !completeness?.hasHonorDeclaration;
+  const canReviewApplication = isReviewableApplication(instructor.status);
 
   // Calcul du message d'explication si blocage d'approbation
   let approvalBlockReason = "";
@@ -357,6 +364,7 @@ export default function InstructorDetailPage() {
         </div>
 
         {/* Boutons d'action décisionnelle */}
+        {canReviewApplication ? (
         <div className="flex items-center gap-2 flex-wrap">
           {/* Bouton Approuver (Désactivé si manque critique) */}
           <Button
@@ -398,10 +406,11 @@ export default function InstructorDetailPage() {
             Rejeter
           </Button>
         </div>
+        ) : null}
       </div>
 
       {/* ── Alerte de blocage si dossier incomplet ─────────────────────────── */}
-      {isCriticalMissing && (
+      {canReviewApplication && isCriticalMissing && (
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm text-destructive-foreground">
           <HugeiconsIcon icon={Alert01Icon} className="size-5 shrink-0 mt-0.5 text-destructive" size={20} strokeWidth={1.5} />
           <div className="space-y-1">

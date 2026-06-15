@@ -47,6 +47,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
   type AdminCourseSubmission,
@@ -614,17 +615,11 @@ export default function CoursesPage() {
       formatDate(item.submittedAt),
     ]);
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `certilys-formations-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsvForExcel(
+      `certilys-formations-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
   }
 
   // ── Filtres SearchFilter

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import QRCode from "qrcode";
 import { z } from "zod/v3";
 import { CtyIcon } from "@/components/icons/cty-i";
 import { Button } from "@/components/ui/button";
@@ -35,8 +36,10 @@ export default function TwoFactorSetupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [qrCodeImage, setQrCodeImage] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [isActivated, setIsActivated] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm({
@@ -48,6 +51,38 @@ export default function TwoFactorSetupForm() {
     fetchSetupDetails();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    async function generateQrCode() {
+      if (!qrCodeUrl) return;
+      try {
+        const dataUrl = await QRCode.toDataURL(qrCodeUrl, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          scale: 8,
+          color: {
+            dark: "#020617",
+            light: "#ffffff",
+          },
+        });
+        if (active) setQrCodeImage(dataUrl);
+      } catch {
+        if (active) {
+          setErrorMessage(
+            "Impossible de générer le QR Code. Copiez la clé secrète manuellement.",
+          );
+        }
+      }
+    }
+
+    void generateQrCode();
+
+    return () => {
+      active = false;
+    };
+  }, [qrCodeUrl]);
+
   async function fetchSetupDetails() {
     try {
       const response = await get2FASetupDetailsAction();
@@ -56,7 +91,7 @@ export default function TwoFactorSetupForm() {
         setSecretKey(response.secretKey);
         setBackupCodes(response.backupCodes);
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Échec du chargement des détails de configuration 2FA.");
     } finally {
       setLoadingDetails(false);
@@ -70,12 +105,13 @@ export default function TwoFactorSetupForm() {
       const response = await confirm2FASetupAction(values.code);
       if (response.success) {
         toast.success("Double Facteur (2FA) configuré avec succès !");
-        router.push(response.redirectTo || "/dashboard");
+        setBackupCodes(response.backupCodes ?? []);
+        setIsActivated(true);
       } else {
         setErrorMessage(response.message || "Code incorrect.");
         form.reset();
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Une erreur est survenue lors de l'activation.");
     } finally {
       setIsLoading(false);
@@ -114,8 +150,14 @@ export default function TwoFactorSetupForm() {
             {/* Étape 1 : QR Code et Clé */}
             <div className="space-y-4 flex flex-col items-center">
               <div className="border border-border p-3 rounded-xl bg-white shadow-sm flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrCodeUrl} alt="2FA QR Code" className="w-44 h-44" />
+                {qrCodeImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={qrCodeImage} alt="2FA QR Code" className="w-44 h-44" />
+                ) : (
+                  <div className="flex h-44 w-44 items-center justify-center rounded-lg bg-muted text-center text-xs text-muted-foreground">
+                    Génération du QR Code...
+                  </div>
+                )}
               </div>
               <div className="text-center w-full">
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground block">
@@ -126,7 +168,7 @@ export default function TwoFactorSetupForm() {
                 </code>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Scannez ce QR Code avec une application d'authentification (Google Authenticator, Microsoft Authenticator, Bitwarden, etc.) ou copiez la clé manuellement.
+                Scannez ce QR Code avec une application d&apos;authentification (Google Authenticator, Microsoft Authenticator, Bitwarden, etc.) ou copiez la clé manuellement.
               </p>
             </div>
 
@@ -134,17 +176,23 @@ export default function TwoFactorSetupForm() {
             <div className="space-y-6">
               <div>
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground block mb-2">
-                  1. Sauvegardez vos codes de secours
+                  1. Codes de secours
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-xs bg-muted border border-border p-3 rounded-lg font-mono text-center">
-                  {backupCodes.map((code) => (
-                    <div key={code} className="border border-border/60 bg-background/50 rounded p-1 select-all">
-                      {code}
+                  {backupCodes.length > 0 ? (
+                    backupCodes.map((code) => (
+                      <div key={code} className="border border-border/60 bg-background/50 rounded p-1 select-all">
+                        {code}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-2 rounded border border-border/60 bg-background/50 p-2 text-muted-foreground">
+                      Ils apparaîtront ici après validation du code.
                     </div>
-                  ))}
+                  )}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-2">
-                  ⚠️ Stockez ces codes dans un endroit sûr. Ils vous permettront d'accéder à votre compte si vous perdez votre appareil.
+                  ⚠️ Stockez ces codes dans un endroit sûr. Ils vous permettront d&apos;accéder à votre compte si vous perdez votre appareil.
                 </p>
               </div>
 
@@ -157,7 +205,7 @@ export default function TwoFactorSetupForm() {
                       render={({ field }) => (
                         <FormItem className="flex flex-col items-center md:items-start space-y-3">
                           <FormLabel className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-                            2. Validez le code d'activation
+                            2. Validez le code d&apos;activation
                           </FormLabel>
                           <FormControl>
                             <InputOTP
@@ -190,9 +238,19 @@ export default function TwoFactorSetupForm() {
                       )}
                     />
 
-                    <Button className="w-full text-xs font-semibold" disabled={isLoading || form.watch("code").length !== 6}>
-                      {isLoading ? "Activation..." : "Activer et continuer vers le dashboard"}
-                    </Button>
+                    {isActivated ? (
+                      <Button
+                        type="button"
+                        className="w-full text-xs font-semibold"
+                        onClick={() => router.push("/dashboard")}
+                      >
+                        Continuer vers le dashboard
+                      </Button>
+                    ) : (
+                      <Button className="w-full text-xs font-semibold" disabled={isLoading || form.watch("code").length !== 6}>
+                        {isLoading ? "Activation..." : "Activer la double authentification"}
+                      </Button>
+                    )}
                   </form>
                 </Form>
               </div>
