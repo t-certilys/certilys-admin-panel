@@ -6,6 +6,7 @@ export type CourseSubmissionStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "APPROVED"
+  | "CHANGES_REQUESTED"
   | "REJECTED"
   | "PUBLISHED"
   | "ARCHIVED";
@@ -140,6 +141,11 @@ export const courseStatusConfig: Record<
     label: "Approuvée",
     colorClass: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10",
     dotClass: "bg-emerald-500",
+  },
+  CHANGES_REQUESTED: {
+    label: "Corrections demandées",
+    colorClass: "text-orange-600 border-orange-500/40 bg-orange-500/10",
+    dotClass: "bg-orange-500",
   },
   REJECTED: {
     label: "Rejetée",

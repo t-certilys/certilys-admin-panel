@@ -204,7 +204,11 @@ function CourseKpiCards({ data }: { data: AdminCourseSubmission[] }) {
     {
       id: "rejected",
       label: "Rejetées / Corrections",
-      value: data.filter((course) => course.status === "REJECTED").length,
+      value: data.filter(
+        (course) =>
+          course.status === "REJECTED" ||
+          course.status === "CHANGES_REQUESTED",
+      ).length,
       colorClass: "text-red-600 border-red-500/40 bg-red-500/10",
       iconBg: "bg-red-500/15",
     },
@@ -676,6 +680,9 @@ export default function CoursesPage() {
             <SelectItem value="DRAFT">Brouillon</SelectItem>
             <SelectItem value="SUBMITTED">Soumise</SelectItem>
             <SelectItem value="APPROVED">Approuvée</SelectItem>
+            <SelectItem value="CHANGES_REQUESTED">
+              Corrections demandées
+            </SelectItem>
             <SelectItem value="REJECTED">Rejetée</SelectItem>
             <SelectItem value="PUBLISHED">Publiée</SelectItem>
             <SelectItem value="ARCHIVED">Archivée</SelectItem>

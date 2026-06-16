@@ -11,6 +11,7 @@ type BackendCourseStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "APPROVED"
+  | "CHANGES_REQUESTED"
   | "REJECTED"
   | "PUBLISHED"
   | "ARCHIVED";
@@ -153,7 +154,11 @@ export async function requestAdminCourseChangesAction(
   id: string,
   reason: string,
 ): Promise<AdminCourseSubmission> {
-  return rejectAdminCourseAction(id, reason);
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(id)}/request-changes`,
+    { reason: reason.trim() },
+  );
+  return mapCourse(response.course);
 }
 
 function mapCourse(course: BackendCourse): AdminCourseSubmission {
