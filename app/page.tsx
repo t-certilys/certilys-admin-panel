@@ -1,11 +1,12 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getAdminSessionAction } from "@/lib/auth-actions";
 
-import InvitationConfirmation from "@/components/certilys-ui/authentication/invitation-confirmation";
+export default async function Home() {
+  const session = await getAdminSessionAction();
 
-export default function Home() {
-  return (
-    <Suspense fallback={null}>
-      <InvitationConfirmation />
-    </Suspense>
-  );
+  if (session) {
+    redirect("/dashboard");
+  }
+
+  redirect("/auth/login");
 }
