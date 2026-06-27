@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  recentOrders,
   orderStatusConfig,
   formatXOF,
   formatDate,
@@ -77,7 +76,7 @@ function OrderRow({ order }: { order: RecentOrder }) {
 
 // ─── Recent Orders Table ─────────────────────────────────────────────────────
 
-export function RecentOrders() {
+export function RecentOrders({ orders }: { orders: RecentOrder[] }) {
   return (
     <Card className="border-border/60 shadow-none bg-card">
       <CardHeader className="px-5 pt-5 pb-2">
@@ -127,9 +126,20 @@ export function RecentOrders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentOrders.map((order) => (
+              {orders.length > 0 ? (
+                orders.map((order) => (
                 <OrderRow key={order.id} order={order} />
-              ))}
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="px-5 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    Aucune commande récente.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

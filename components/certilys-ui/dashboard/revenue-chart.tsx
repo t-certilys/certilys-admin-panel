@@ -18,17 +18,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 
-import {
-  revenueData,
-  type RevenuePoint,
-} from "@/lib/mock/admin-dashboard-data";
-
-// Préparation des données pour le graphique
-const chartData = revenueData.map((pt: RevenuePoint) => ({
-  date: pt.date,
-  caBrut: pt.caBrut,
-  commission: pt.commission,
-}));
+import { type RevenuePoint } from "@/lib/mock/admin-dashboard-data";
 
 function fmtXOF(val: number) {
   return (
@@ -37,10 +27,23 @@ function fmtXOF(val: number) {
   );
 }
 
+type RevenueTooltipPayload = {
+  name?: string;
+  value?: number;
+  stroke?: string;
+  color?: string;
+};
+
+type RevenueTooltipProps = {
+  active?: boolean;
+  payload?: RevenueTooltipPayload[];
+  label?: string | number;
+};
+
 // Tooltip personnalisé et haut de gamme
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: RevenueTooltipProps) => {
   if (active && payload && payload.length) {
-    const dateObj = new Date(label);
+    const dateObj = new Date(label ?? "1970-01-01");
     const dateFormatted = dateObj.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -51,9 +54,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700/60 shadow-lg text-xs font-sans min-w-[200px]">
         <p className="font-semibold text-neutral-400 mb-2">{dateFormatted}</p>
         <div className="flex flex-col gap-1.5">
-          {payload.map((entry: any) => (
+          {payload.map((entry) => (
             <div
-              key={entry.name}
+              key={entry.name ?? "serie"}
               className="flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-1.5">
@@ -64,7 +67,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 <span className="text-neutral-300">{entry.name}</span>
               </div>
               <span className="font-bold tabular-nums">
-                {fmtXOF(entry.value)}
+                {fmtXOF(entry.value ?? 0)}
               </span>
             </div>
           ))}
@@ -75,7 +78,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function RevenueChart() {
+export function RevenueChart({ data }: { data: RevenuePoint[] }) {
+  const chartData = data.map((pt) => ({
+    date: pt.date,
+    caBrut: pt.caBrut,
+    commission: pt.commission,
+  }));
+
   return (
     <Card
       className="border-border/60 shadow-none bg-card"

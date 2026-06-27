@@ -11,13 +11,29 @@ import { BottomDrawer } from "./bottom-drawer";
 import { BottomNav } from "./bottom-nav";
 import { dashboardNavConfig, type DashboardNavGroup } from "@/lib/dashboard-nav-config";
 
+type DashboardUser = {
+  displayName?: string | null;
+  email: string;
+  avatarUrl?: string | null;
+};
+
 interface DashboardLayoutProps {
   children: ReactNode;
   navConfig?: DashboardNavGroup[];
+  user?: DashboardUser;
 }
 
-export function DashboardLayout({ children, navConfig = dashboardNavConfig }: DashboardLayoutProps) {
+export function DashboardLayout({
+  children,
+  navConfig = dashboardNavConfig,
+  user,
+}: DashboardLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const sidebarUser = {
+    name: user?.displayName?.trim() || user?.email.split("@")[0] || "Admin",
+    email: user?.email ?? "admin@certilys.com",
+    avatar: user?.avatarUrl ?? null,
+  };
 
   return (
     <TooltipProvider>
@@ -30,7 +46,7 @@ export function DashboardLayout({ children, navConfig = dashboardNavConfig }: Da
         }
         className="h-svh overflow-hidden"
       >
-        <AppSidebar navConfig={navConfig} />
+        <AppSidebar navConfig={navConfig} user={sidebarUser} />
         <SidebarInset className="h-svh overflow-y-auto rounded-none shadow-none">
           <SiteHeader />
           <main className="flex flex-1 flex-col overflow-x-hidden pb-20 md:pb-0">

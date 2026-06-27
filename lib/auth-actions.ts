@@ -4,7 +4,9 @@ import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
 
 export type AdminUser = {
   id: string;
+  displayName?: string | null;
   email: string;
+  avatarUrl?: string | null;
   role: "ADMIN" | "MODERATOR" | "USER";
   accountStatus: "ACTIVE" | "SUSPENDED" | "PENDING";
   requiresTwoFactorSetup: boolean;

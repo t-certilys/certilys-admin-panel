@@ -22,14 +22,15 @@ import { Logo } from "../certilys-ui/logo";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 
-const sidebarUser = {
-  name: "murgo",
-  email: "m@example.com",
-  avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=murgo",
+type SidebarUser = {
+  name: string;
+  email: string;
+  avatar: string | null;
 };
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navConfig?: DashboardNavGroup[];
+  user: SidebarUser;
 }
 
 const collapsedIconButtonClassName = cn(
@@ -41,6 +42,7 @@ const collapsedIconButtonClassName = cn(
 
 export function AppSidebar({
   navConfig = dashboardNavConfig,
+  user,
   ...props
 }: AppSidebarProps) {
   const { state, toggleSidebar } = useSidebar();
@@ -187,7 +189,7 @@ export function AppSidebar({
         >
           {!isCollapsed ? (
             <SidebarGroup className="p-0">
-              <NavUser user={sidebarUser} />
+              <NavUser user={user} />
             </SidebarGroup>
           ) : (
             <Button

@@ -30,5 +30,5 @@ export default async function Layout({ children }: { children: React.ReactNode }
     redirect("/auth/2fa");
   }
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return <DashboardLayout user={session}>{children}</DashboardLayout>;
 }

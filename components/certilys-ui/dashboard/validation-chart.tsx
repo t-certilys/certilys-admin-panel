@@ -19,7 +19,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 
-import { validationData } from "@/lib/mock/admin-dashboard-data";
+import type { ValidationPoint } from "@/lib/mock/admin-dashboard-data";
 
 const SERIES = [
   { key: "candidatures", label: "Candidatures reçues", color: "var(--chart-1)" },
@@ -28,7 +28,7 @@ const SERIES = [
   { key: "formationsApprouvees", label: "Formations approuvées", color: "var(--chart-5)" },
 ] as const;
 
-export function ValidationChart() {
+export function ValidationChart({ data }: { data: ValidationPoint[] }) {
   return (
     <Card
       className="border-border/60 shadow-none bg-card h-full"
@@ -52,7 +52,7 @@ export function ValidationChart() {
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={validationData}
+              data={data}
               margin={{ top: 8, right: 4, bottom: 4, left: -12 }}
               barCategoryGap="25%"
               barGap={2}

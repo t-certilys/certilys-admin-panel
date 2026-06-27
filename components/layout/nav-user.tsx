@@ -14,7 +14,7 @@ export function NavUser({
   user: {
     name: string;
     email: string;
-    avatar: string;
+    avatar: string | null;
   };
   onLogout?: () => void;
   compact?: boolean;
@@ -32,7 +32,9 @@ export function NavUser({
         {compact ? (
           <div className="flex size-9 items-center justify-center">
             <Avatar className="h-9 w-9 rounded-full shrink-0">
-              <AvatarImage src={user.avatar} alt={user.name} />
+              {user.avatar ? (
+                <AvatarImage src={user.avatar} alt={user.name} />
+              ) : null}
               <AvatarFallback className="rounded-full bg-white/10 text-white font-semibold text-xs">
                 {initials}
               </AvatarFallback>
@@ -41,7 +43,9 @@ export function NavUser({
         ) : (
         <div className="flex items-center gap-2 rounded-xl bg-white/5 px-2 py-1.5">
           <Avatar className="h-8 w-8 rounded-lg shrink-0">
-            <AvatarImage src={user.avatar} alt={user.name} />
+            {user.avatar ? (
+              <AvatarImage src={user.avatar} alt={user.name} />
+            ) : null}
             <AvatarFallback className="rounded-lg bg-white/15 text-white font-semibold text-xs">
               {initials}
             </AvatarFallback>
