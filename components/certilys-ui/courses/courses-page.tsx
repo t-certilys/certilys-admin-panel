@@ -47,12 +47,17 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { downloadCsvForExcel } from "@/lib/csv-export";
+import {
+  approveAdminCourseAction,
+  getAdminCoursesAction,
+  rejectAdminCourseAction,
+  requestAdminCourseChangesAction,
+} from "@/lib/admin-courses-actions";
 
 import {
   type AdminCourseSubmission,
   type CourseSubmissionStatus,
-  mockCourseSubmissions,
-  courseKpis,
   courseStatusConfig,
   COURSE_CATEGORIES,
   COURSE_LEVELS,
@@ -135,31 +140,18 @@ const ACTION_CONFIG: Record<
 // Simulation API
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function simulateApiCall(
+async function applyCourseDecision(
   type: ActionType,
   id: string,
   reason?: string,
-): Promise<{ success: boolean; message: string }> {
-  await new Promise((r) => setTimeout(r, 1200));
-
-  if (Math.random() < 0.05) {
-    throw new Error("Erreur serveur. Veuillez réessayer.");
+): Promise<AdminCourseSubmission> {
+  if (type === "approve") {
+    return approveAdminCourseAction(id, reason);
   }
-
-  const endpointMap: Record<ActionType, string> = {
-    approve: "approve",
-    "request-changes": "request-changes",
-    reject: "reject",
-  };
-  const endpoint = `/admin/courses/submissions/${id}/${endpointMap[type]}`;
-  console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    courseId: id,
-    reason,
-    endpoint,
-    timestamp: new Date().toISOString(),
-  });
-
-  return { success: true, message: "Opération réalisée avec succès." };
+  if (type === "request-changes") {
+    return requestAdminCourseChangesAction(id, reason ?? "");
+  }
+  return rejectAdminCourseAction(id, reason ?? "");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,10 +182,48 @@ const KPI_ICONS: Record<string, IconSvgElement> = {
   archived: Archive01Icon,
 };
 
-function CourseKpiCards() {
+function CourseKpiCards({ data }: { data: AdminCourseSubmission[] }) {
+  const kpis = [
+    {
+      id: "submitted",
+      label: "Soumises",
+      value: data.filter((course) => course.status === "SUBMITTED").length,
+      colorClass: "text-amber-600 border-amber-500/40 bg-amber-500/10",
+      iconBg: "bg-amber-500/15",
+    },
+    {
+      id: "approved",
+      label: "Approuvées",
+      value: data.filter(
+        (course) =>
+          course.status === "APPROVED" || course.status === "PUBLISHED",
+      ).length,
+      colorClass: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10",
+      iconBg: "bg-emerald-500/15",
+    },
+    {
+      id: "rejected",
+      label: "Rejetées / Corrections",
+      value: data.filter(
+        (course) =>
+          course.status === "REJECTED" ||
+          course.status === "CHANGES_REQUESTED",
+      ).length,
+      colorClass: "text-red-600 border-red-500/40 bg-red-500/10",
+      iconBg: "bg-red-500/15",
+    },
+    {
+      id: "archived",
+      label: "Archivées",
+      value: data.filter((course) => course.status === "ARCHIVED").length,
+      colorClass: "text-slate-500 border-slate-400/40 bg-slate-400/10",
+      iconBg: "bg-slate-400/15",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {courseKpis.map((kpi) => {
+      {kpis.map((kpi) => {
         const Icon = KPI_ICONS[kpi.id];
         return (
           <Card
@@ -452,9 +482,32 @@ export default function CoursesPage() {
 
   // ── Loading initial simulé
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState(false);
+  const [data, setData] = React.useState<AdminCourseSubmission[]>([]);
+
   React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
+    let mounted = true;
+    setLoading(true);
+    setLoadError(false);
+
+    getAdminCoursesAction()
+      .then((courses) => {
+        if (!mounted) return;
+        setData(courses);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setData([]);
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // ── Dialog action
@@ -468,8 +521,6 @@ export default function CoursesPage() {
   });
 
   // ── Data locale
-  const [data, setData] = React.useState(mockCourseSubmissions);
-
   // ── Filtrage
   const filteredData = React.useMemo(() => {
     return data.filter((item) => {
@@ -536,6 +587,7 @@ export default function CoursesPage() {
 
   // ── Ouverture dialog
   function openAction(type: ActionType, course: AdminCourseSubmission) {
+    if (course.status !== "SUBMITTED") return;
     setDialog({
       open: true,
       type,
@@ -559,25 +611,15 @@ export default function CoursesPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, dialog.course.id, reason);
-
-      const newStatus: CourseSubmissionStatus =
-        dialog.type === "approve"
-          ? "APPROVED"
-          : dialog.type === "reject"
-            ? "REJECTED"
-            : "REJECTED"; // request-changes → on garde REJECTED pour simplification mock
+      const updatedCourse = await applyCourseDecision(
+        dialog.type,
+        dialog.course.id,
+        reason,
+      );
 
       setData((prev) =>
         prev.map((item) =>
-          item.id === dialog.course!.id
-            ? {
-                ...item,
-                status: newStatus,
-                lastDecisionReason: reason || item.lastDecisionReason,
-                lastDecisionAt: new Date().toISOString(),
-              }
-            : item,
+          item.id === dialog.course!.id ? updatedCourse : item,
         ),
       );
 
@@ -614,17 +656,11 @@ export default function CoursesPage() {
       formatDate(item.submittedAt),
     ]);
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `certilys-formations-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsvForExcel(
+      `certilys-formations-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
   }
 
   // ── Filtres SearchFilter
@@ -644,7 +680,11 @@ export default function CoursesPage() {
             <SelectItem value="DRAFT">Brouillon</SelectItem>
             <SelectItem value="SUBMITTED">Soumise</SelectItem>
             <SelectItem value="APPROVED">Approuvée</SelectItem>
+            <SelectItem value="CHANGES_REQUESTED">
+              Corrections demandées
+            </SelectItem>
             <SelectItem value="REJECTED">Rejetée</SelectItem>
+            <SelectItem value="PUBLISHED">Publiée</SelectItem>
             <SelectItem value="ARCHIVED">Archivée</SelectItem>
           </SelectContent>
         </Select>
@@ -825,7 +865,7 @@ export default function CoursesPage() {
       </div>
 
       {/* ── 2. KPI compacts ────────────────────────────────────────────────── */}
-      <CourseKpiCards />
+      <CourseKpiCards data={data} />
 
       {/* ── 3. Recherche + filtres ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -871,8 +911,9 @@ export default function CoursesPage() {
               Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
             {/* Données chargées */}
-            {!loading && !hasData && <EmptyState type="empty" />}
-            {!loading && hasData && !hasResults && (
+            {!loading && loadError && <EmptyState type="error" />}
+            {!loading && !loadError && !hasData && <EmptyState type="empty" />}
+            {!loading && !loadError && hasData && !hasResults && (
               <EmptyState type="no-results" />
             )}
 
@@ -977,6 +1018,7 @@ export default function CoursesPage() {
                             className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
                             aria-label={`Actions pour ${course.title}`}
                             id={`btn-actions-course-${course.id}`}
+                            disabled={course.status !== "SUBMITTED"}
                           >
                             Décider
                           </Button>

@@ -37,6 +37,7 @@ export type AuthVerifyResponse = {
   method?: "TOTP" | "BACKUP_CODE";
   setupToken?: string;
   redirectTo?: string;
+  backupCodes?: string[];
 };
 
 export type TwoFactorSetupResponse = {
@@ -56,11 +57,14 @@ export async function startAuthAction(
 }
 
 export async function verifyOtpAction(
-  _challengeId: string,
+  challengeId: string,
   code: string,
 ): Promise<AuthVerifyResponse> {
   return withAdminError(() =>
-    adminMutation<AuthVerifyResponse>("/admin/auth/verify", { code }),
+    adminMutation<AuthVerifyResponse>("/admin/auth/verify", {
+      challengeId,
+      code,
+    }),
   );
 }
 
@@ -68,11 +72,35 @@ export async function googleCallbackAction(
   _simulationToken?: string,
 ): Promise<AuthVerifyResponse> {
   void _simulationToken;
-  return {
-    success: false,
-    message:
-      "La connexion Google du panel admin sera activée après validation OAuth dédiée.",
-  };
+  try {
+    const response = await adminMutation<{ url?: string }>(
+      "/admin/auth/google/start",
+    );
+    return {
+      success: true,
+      status: "SUCCESS",
+      redirectTo: response.url,
+      message: "Redirection vers Google.",
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Impossible de démarrer la connexion Google.";
+    return { success: false, message };
+  }
+}
+
+export async function completeGoogleCallbackAction(
+  code: string,
+  state: string,
+): Promise<AuthVerifyResponse> {
+  return withAdminError(() =>
+    adminMutation<AuthVerifyResponse>("/admin/auth/google/complete", {
+      code,
+      state,
+    }),
+  );
 }
 
 export async function verify2FaAction(

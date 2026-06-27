@@ -34,10 +34,15 @@ import { DecisionDialog, DocumentPreviewDialog } from "@/components/certilys-ui/
 import {
   type InstructorApplication,
   type InstructorApplicationStatus,
-  mockInstructorApplications,
   instructorStatusConfig,
   formatDate,
 } from "@/lib/mock/admin-instructors-data";
+import {
+  approveInstructorApplicationAction,
+  getInstructorApplicationAction,
+  rejectInstructorApplicationAction,
+  requestInstructorChangesAction,
+} from "@/lib/admin-instructors-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -118,11 +123,13 @@ function formatFileSize(bytes?: number): string {
   return `${mb.toFixed(1)} Mo`;
 }
 
-function getLegalStatusLabel(status?: "INDIVIDUAL" | "COMPANY"): string {
+function getLegalStatusLabel(
+  status?: "INDIVIDUAL" | "ORGANIZATION" | "COMPANY",
+): string {
   if (!status) return "—";
-  return status === "INDIVIDUAL"
-    ? "Personne physique (Individuel)"
-    : "Personne morale (Société / Cabinet)";
+  if (status === "INDIVIDUAL") return "Personne physique (Individuel)";
+  if (status === "ORGANIZATION") return "Organisation / Association";
+  return "Personne morale (Société / Cabinet)";
 }
 
 function getDocTypeLabel(type?: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE"): string {
@@ -143,20 +150,22 @@ function getDocTypeLabel(type?: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE"): str
 // Simulation appel API
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function simulateApiCall(
+async function submitInstructorDecision(
   type: ActionType,
   id: string,
   reason?: string
-): Promise<void> {
-  await new Promise((r) => setTimeout(r, 1200));
-  if (Math.random() < 0.03) {
-    throw new Error("Erreur de connexion avec le serveur. Veuillez réessayer.");
+): Promise<InstructorApplication> {
+  if (type === "approve") {
+    return approveInstructorApplicationAction(id, reason);
   }
-  console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    instructorId: id,
-    reason,
-    timestamp: new Date().toISOString(),
-  });
+  if (type === "reject") {
+    return rejectInstructorApplicationAction(id, reason ?? "");
+  }
+  return requestInstructorChangesAction(id, reason ?? "");
+}
+
+function isReviewableApplication(status: InstructorApplicationStatus) {
+  return status === "PENDING";
 }
 
 function StatusBadge({ status }: { status: InstructorApplicationStatus }) {
@@ -191,12 +200,27 @@ export default function InstructorDetailPage() {
   const [previewOpen, setPreviewOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const found = mockInstructorApplications.find((i) => i.id === id);
-    if (found) {
-      setInstructor(found);
-    } else {
-      setLoadError(true);
-    }
+    let active = true;
+    setInstructor(null);
+    setLoadError(false);
+
+    getInstructorApplicationAction(id)
+      .then((application) => {
+        if (!active) return;
+        if (application) {
+          setInstructor(application);
+        } else {
+          setLoadError(true);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   // Dialog action
@@ -209,6 +233,8 @@ export default function InstructorDetailPage() {
   });
 
   function openAction(type: ActionType) {
+    if (!instructor || !isReviewableApplication(instructor.status)) return;
+
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -223,25 +249,13 @@ export default function InstructorDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, instructor.id, reason);
-
-      const newStatus: InstructorApplicationStatus =
-        dialog.type === "approve"
-          ? "APPROVED"
-          : dialog.type === "reject"
-            ? "REJECTED"
-            : "CHANGES_REQUESTED";
-
-      setInstructor((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: newStatus,
-              lastDecisionReason: reason || prev.lastDecisionReason,
-              lastDecisionAt: new Date().toISOString(),
-            }
-          : prev
+      const updated = await submitInstructorDecision(
+        dialog.type,
+        instructor.id,
+        reason,
       );
+
+      setInstructor(updated);
 
       setDialog((prev) => ({ ...prev, open: false, loading: false }));
     } catch (err) {
@@ -310,6 +324,7 @@ export default function InstructorDetailPage() {
     !completeness?.hasAddress ||
     !completeness?.hasIdentityDocument ||
     !completeness?.hasHonorDeclaration;
+  const canReviewApplication = isReviewableApplication(instructor.status);
 
   // Calcul du message d'explication si blocage d'approbation
   let approvalBlockReason = "";
@@ -349,6 +364,7 @@ export default function InstructorDetailPage() {
         </div>
 
         {/* Boutons d'action décisionnelle */}
+        {canReviewApplication ? (
         <div className="flex items-center gap-2 flex-wrap">
           {/* Bouton Approuver (Désactivé si manque critique) */}
           <Button
@@ -390,10 +406,11 @@ export default function InstructorDetailPage() {
             Rejeter
           </Button>
         </div>
+        ) : null}
       </div>
 
       {/* ── Alerte de blocage si dossier incomplet ─────────────────────────── */}
-      {isCriticalMissing && (
+      {canReviewApplication && isCriticalMissing && (
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm text-destructive-foreground">
           <HugeiconsIcon icon={Alert01Icon} className="size-5 shrink-0 mt-0.5 text-destructive" size={20} strokeWidth={1.5} />
           <div className="space-y-1">

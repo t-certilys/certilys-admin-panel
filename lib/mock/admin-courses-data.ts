@@ -6,7 +6,9 @@ export type CourseSubmissionStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "APPROVED"
+  | "CHANGES_REQUESTED"
   | "REJECTED"
+  | "PUBLISHED"
   | "ARCHIVED";
 
 export type CourseAssetType = "PDF" | "FILE" | "LINK";
@@ -140,10 +142,20 @@ export const courseStatusConfig: Record<
     colorClass: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10",
     dotClass: "bg-emerald-500",
   },
+  CHANGES_REQUESTED: {
+    label: "Corrections demandées",
+    colorClass: "text-orange-600 border-orange-500/40 bg-orange-500/10",
+    dotClass: "bg-orange-500",
+  },
   REJECTED: {
     label: "Rejetée",
     colorClass: "text-red-600 border-red-500/40 bg-red-500/10",
     dotClass: "bg-red-500",
+  },
+  PUBLISHED: {
+    label: "Publiée",
+    colorClass: "text-blue-600 border-blue-500/40 bg-blue-500/10",
+    dotClass: "bg-blue-500",
   },
   ARCHIVED: {
     label: "Archivée",

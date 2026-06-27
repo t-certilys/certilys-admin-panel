@@ -34,12 +34,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import {
+  approveAdminCourseAction,
+  getAdminCourseAction,
+  rejectAdminCourseAction,
+  requestAdminCourseChangesAction,
+} from "@/lib/admin-courses-actions";
 
 import {
   type AdminCourseSubmission,
   type CourseSubmissionStatus,
   type CourseAsset,
-  mockCourseSubmissions,
   courseStatusConfig,
   COURSE_LEVELS,
   formatDate,
@@ -117,20 +122,18 @@ const ACTION_CONFIG: Record<
 // Simulation API
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function simulateApiCall(
+async function applyCourseDecision(
   type: ActionType,
   id: string,
   reason?: string,
-): Promise<void> {
-  await new Promise((r) => setTimeout(r, 1200));
-  if (Math.random() < 0.03) {
-    throw new Error("Erreur de connexion avec le serveur. Veuillez réessayer.");
+): Promise<AdminCourseSubmission> {
+  if (type === "approve") {
+    return approveAdminCourseAction(id, reason);
   }
-  console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    courseId: id,
-    reason,
-    timestamp: new Date().toISOString(),
-  });
+  if (type === "request-changes") {
+    return requestAdminCourseChangesAction(id, reason ?? "");
+  }
+  return rejectAdminCourseAction(id, reason ?? "");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,12 +238,27 @@ export default function CourseDetailPage() {
   const [loadError, setLoadError] = React.useState(false);
 
   React.useEffect(() => {
-    const found = mockCourseSubmissions.find((c) => c.id === id);
-    if (found) {
-      setCourse(found);
-    } else {
-      setLoadError(true);
-    }
+    let mounted = true;
+    setCourse(null);
+    setLoadError(false);
+
+    getAdminCourseAction(id)
+      .then((found) => {
+        if (!mounted) return;
+        if (found) {
+          setCourse(found);
+        } else {
+          setLoadError(true);
+        }
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   // Dialog action
@@ -253,6 +271,7 @@ export default function CourseDetailPage() {
   });
 
   function openAction(type: ActionType) {
+    if (course?.status !== "SUBMITTED") return;
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -267,25 +286,12 @@ export default function CourseDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, course.id, reason);
-
-      const newStatus: CourseSubmissionStatus =
-        dialog.type === "approve"
-          ? "APPROVED"
-          : dialog.type === "reject"
-            ? "REJECTED"
-            : "REJECTED";
-
-      setCourse((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: newStatus,
-              lastDecisionReason: reason || prev.lastDecisionReason,
-              lastDecisionAt: new Date().toISOString(),
-            }
-          : prev,
+      const updatedCourse = await applyCourseDecision(
+        dialog.type,
+        course.id,
+        reason,
       );
+      setCourse(updatedCourse);
 
       setDialog((prev) => ({ ...prev, open: false, loading: false }));
     } catch (err) {
@@ -372,6 +378,7 @@ export default function CourseDetailPage() {
     hasModulesAndLessons,
   ];
   const isCriticalMissing = criticalChecks.some((c) => !c);
+  const isReviewable = course.status === "SUBMITTED";
 
   // Raison du blocage
   let approvalBlockReason = "";
@@ -441,13 +448,13 @@ export default function CourseDetailPage() {
             variant="outline"
             size="sm"
             className={`gap-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 ${
-              isCriticalMissing ? "opacity-50 cursor-not-allowed" : ""
+              isCriticalMissing || !isReviewable ? "opacity-50 cursor-not-allowed" : ""
             }`}
             onClick={() => {
-              if (isCriticalMissing) return;
+              if (isCriticalMissing || !isReviewable) return;
               openAction("approve");
             }}
-            disabled={isCriticalMissing}
+            disabled={isCriticalMissing || !isReviewable}
           >
             <HugeiconsIcon
               icon={CheckmarkSquare01Icon}
@@ -464,6 +471,7 @@ export default function CourseDetailPage() {
             size="sm"
             className="gap-2 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
             onClick={() => openAction("request-changes")}
+            disabled={!isReviewable}
           >
             <HugeiconsIcon
               icon={MessageLock01Icon}
@@ -480,6 +488,7 @@ export default function CourseDetailPage() {
             size="sm"
             className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
             onClick={() => openAction("reject")}
+            disabled={!isReviewable}
           >
             <HugeiconsIcon
               icon={Cancel01Icon}

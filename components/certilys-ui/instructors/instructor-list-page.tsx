@@ -47,17 +47,22 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
   type InstructorApplication,
   type InstructorApplicationStatus,
-  mockInstructorApplications,
-  instructorKpis,
   instructorStatusConfig,
   INSTRUCTOR_SPECIALTIES,
   INSTRUCTOR_COUNTRIES,
   formatDate,
 } from "@/lib/mock/admin-instructors-data";
+import {
+  approveInstructorApplicationAction,
+  getInstructorApplicationsAction,
+  rejectInstructorApplicationAction,
+  requestInstructorChangesAction,
+} from "@/lib/admin-instructors-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types actions
@@ -134,26 +139,22 @@ const ACTION_CONFIG: Record<
 // Simulation appel API
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function simulateApiCall(
+async function submitInstructorDecision(
   type: ActionType,
   id: string,
   reason?: string,
-): Promise<{ success: boolean; message: string }> {
-  await new Promise((r) => setTimeout(r, 1200));
-
-  if (Math.random() < 0.05) {
-    throw new Error("Erreur serveur. Veuillez réessayer.");
+): Promise<InstructorApplication> {
+  if (type === "approve") {
+    return approveInstructorApplicationAction(id, reason);
   }
+  if (type === "reject") {
+    return rejectInstructorApplicationAction(id, reason ?? "");
+  }
+  return requestInstructorChangesAction(id, reason ?? "");
+}
 
-  const endpoint = `/admin/instructor-applications/${id}/${type === "request-changes" ? "request-changes" : type === "approve" ? "approve" : "reject"}`;
-  console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    instructorId: id,
-    reason,
-    endpoint,
-    timestamp: new Date().toISOString(),
-  });
-
-  return { success: true, message: "Opération réalisée avec succès." };
+function isReviewableApplication(status: InstructorApplicationStatus) {
+  return status === "PENDING";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -202,7 +203,38 @@ const KPI_ICONS: Record<string, IconSvgElement> = {
   rejected: CancelCircleIcon,
 };
 
-function InstructorKpiCards() {
+function InstructorKpiCards({ data }: { data: InstructorApplication[] }) {
+  const instructorKpis = [
+    {
+      id: "pending",
+      label: "En attente",
+      value: data.filter((item) => item.status === "PENDING").length,
+      colorClass: "text-amber-600 border-amber-500/40 bg-amber-500/10",
+      iconBg: "bg-amber-500/15",
+    },
+    {
+      id: "approved",
+      label: "Approuvés",
+      value: data.filter((item) => item.status === "APPROVED").length,
+      colorClass: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10",
+      iconBg: "bg-emerald-500/15",
+    },
+    {
+      id: "changes_requested",
+      label: "Corrections demandées",
+      value: data.filter((item) => item.status === "CHANGES_REQUESTED").length,
+      colorClass: "text-orange-600 border-orange-500/40 bg-orange-500/10",
+      iconBg: "bg-orange-500/15",
+    },
+    {
+      id: "rejected",
+      label: "Rejetés",
+      value: data.filter((item) => item.status === "REJECTED").length,
+      colorClass: "text-red-600 border-red-500/40 bg-red-500/10",
+      iconBg: "bg-red-500/15",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {instructorKpis.map((kpi) => {
@@ -460,11 +492,33 @@ export default function InstructorsPage() {
     setStatusParam(null);
   }, [setStatusParam]);
 
-  // ── Loading initial simulé
+  // ── Loading initial
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState(false);
+  const [data, setData] = React.useState<InstructorApplication[]>([]);
+
   React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
+    let active = true;
+    setLoading(true);
+    setLoadError(false);
+
+    getInstructorApplicationsAction()
+      .then((applications) => {
+        if (!active) return;
+        setData(applications);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // ── Dialog action
@@ -476,9 +530,6 @@ export default function InstructorsPage() {
     loading: false,
     error: null,
   });
-
-  // ── Data locale (en prod → state géré par SWR ou React Query)
-  const [data, setData] = React.useState(mockInstructorApplications);
 
   // ── Filtrage
   const filteredData = React.useMemo(() => {
@@ -530,6 +581,8 @@ export default function InstructorsPage() {
 
   // ── Ouverture dialog
   function openAction(type: ActionType, instructor: InstructorApplication) {
+    if (!isReviewableApplication(instructor.status)) return;
+
     setDialog({
       open: true,
       type,
@@ -553,26 +606,15 @@ export default function InstructorsPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, dialog.instructor.id, reason);
-
-      // Mise à jour optimiste locale
-      const newStatus: InstructorApplicationStatus =
-        dialog.type === "approve"
-          ? "APPROVED"
-          : dialog.type === "reject"
-            ? "REJECTED"
-            : "CHANGES_REQUESTED";
+      const updated = await submitInstructorDecision(
+        dialog.type,
+        dialog.instructor.id,
+        reason,
+      );
 
       setData((prev) =>
         prev.map((item) =>
-          item.id === dialog.instructor!.id
-            ? {
-                ...item,
-                status: newStatus,
-                lastDecisionReason: reason || item.lastDecisionReason,
-                lastDecisionAt: new Date().toISOString(),
-              }
-            : item,
+          item.id === dialog.instructor!.id ? updated : item,
         ),
       );
 
@@ -611,17 +653,11 @@ export default function InstructorsPage() {
       item.isComplete ? "Oui" : "Non",
     ]);
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `certilys-formateurs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsvForExcel(
+      `certilys-formateurs-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
   }
 
   // ── Filtres SearchFilter
@@ -786,7 +822,7 @@ export default function InstructorsPage() {
       </div>
 
       {/* ── 2. KPI compacts ────────────────────────────────────────────────── */}
-      <InstructorKpiCards />
+      <InstructorKpiCards data={data} />
 
       {/* ── 3. Recherche + filtres ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -835,18 +871,23 @@ export default function InstructorsPage() {
               Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
             {/* Données chargées */}
-            {!loading && !hasData && <EmptyState type="empty" />}
-            {!loading && hasData && !hasResults && (
+            {!loading && loadError && <EmptyState type="error" />}
+            {!loading && !loadError && !hasData && <EmptyState type="empty" />}
+            {!loading && !loadError && hasData && !hasResults && (
               <EmptyState type="no-results" />
             )}
 
             {!loading &&
+              !loadError &&
               hasResults &&
-              filteredData.map((instructor) => (
-                <TableRow
-                  key={instructor.id}
-                  className="group hover:bg-muted/30 transition-colors"
-                >
+              filteredData.map((instructor) => {
+                const canDecide = isReviewableApplication(instructor.status);
+
+                return (
+                  <TableRow
+                    key={instructor.id}
+                    className="group hover:bg-muted/30 transition-colors"
+                  >
                   {/* Formateur */}
                   <TableCell>
                     <Link
@@ -919,7 +960,8 @@ export default function InstructorsPage() {
                       </Button>
 
                       {/* Menu actions */}
-                      <DropdownMenu>
+                      {canDecide ? (
+                        <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
@@ -974,10 +1016,20 @@ export default function InstructorsPage() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+                          disabled
+                        >
+                          Décision prise
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
           </TableBody>
         </Table>
       </div>
