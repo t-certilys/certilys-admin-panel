@@ -40,12 +40,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppDialog, DecisionDialog, InternalProfileDialog } from "@/components/certilys-ui/dialogs";
+import {
+  inviteAdminTeamMemberAction,
+  reactivateAdminTeamMemberAction,
+  resendAdminInvitationAction,
+  suspendAdminTeamMemberAction,
+} from "@/lib/admin-team-actions";
 
 import {
   type TeamMember,
+  type TeamKpis,
   type TeamRole,
   type TeamMemberStatus,
-  mockTeamMembers,
   getTeamKpis,
 } from "@/lib/mock/admin-team-data";
 
@@ -154,7 +160,12 @@ function formatDateTime(dateStr: string | null) {
 // Page Équipe interne
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function TeamPage() {
+type TeamPageProps = {
+  initialMembers: TeamMember[];
+  initialKpis?: TeamKpis;
+};
+
+export default function TeamPage({ initialMembers, initialKpis }: TeamPageProps) {
   // ── États locaux
   const [searchValue, setSearchValue] = React.useState("");
   const [filterValues, setFilterValues] = React.useState<Record<string, string>>({
@@ -163,13 +174,14 @@ export default function TeamPage() {
     twoFactor: "",
   });
 
-  const [loading, setLoading] = React.useState(true);
-  const [data, setData] = React.useState<TeamMember[]>(mockTeamMembers);
+  const loading = false;
+  const [data, setData] = React.useState<TeamMember[]>(initialMembers);
   const [actionPending, setActionPending] = React.useState<string | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
   // États pour les Dialogs
   const [inviteOpen, setInviteOpen] = React.useState(false);
-  const [newMember, setNewMember] = React.useState({ name: "", email: "", role: "MODERATOR" as TeamRole });
+  const [newMember, setNewMember] = React.useState({ name: "", email: "", role: "ADMIN" as TeamRole });
 
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmType, setConfirmType] = React.useState<"suspend" | "reactivate" | "resend" | null>(null);
@@ -178,12 +190,11 @@ export default function TeamPage() {
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [profileMember, setProfileMember] = React.useState<TeamMember | null>(null);
 
-  React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 650);
-    return () => clearTimeout(t);
-  }, []);
-
-  const kpis = React.useMemo(() => getTeamKpis(data), [data]);
+  const kpis = React.useMemo(
+    () =>
+      data === initialMembers && initialKpis ? initialKpis : getTeamKpis(data),
+    [data, initialKpis, initialMembers],
+  );
 
   // Filtrage des membres
   const filteredData = React.useMemo(() => {
@@ -200,82 +211,80 @@ export default function TeamPage() {
     });
   }, [data, searchValue, filterValues]);
 
-  // ── Actions de simulation (endpoints préparés)
-  // GET /admin/team est représenté par l'affichage initial
-  // POST /admin/team/invitations
   async function handleInviteSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!newMember.name || !newMember.email) return;
 
     setActionPending("invite");
-    await new Promise((r) => setTimeout(r, 800));
-
-    const invited: TeamMember = {
-      id: `tm_${Date.now()}`,
-      name: newMember.name,
-      email: newMember.email.toLowerCase(),
-      role: newMember.role,
-      status: "INVITED",
-      twoFactorEnabled: false,
-      lastLoginAt: null,
-    };
-
-    setData((prev) => [invited, ...prev]);
-    console.log("[ENDPOINT API MOCK] POST /admin/team/invitations SUCCESS", invited);
-
-    setNewMember({ name: "", email: "", role: "MODERATOR" });
-    setInviteOpen(false);
-    setActionPending(null);
+    setActionError(null);
+    try {
+      const invited = await inviteAdminTeamMemberAction({
+        displayName: newMember.name,
+        email: newMember.email,
+        role: newMember.role,
+      });
+      setData((prev) => [invited, ...prev.filter((item) => item.email !== invited.email)]);
+      setNewMember({ name: "", email: "", role: "ADMIN" });
+      setInviteOpen(false);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossible d'envoyer l'invitation.");
+    } finally {
+      setActionPending(null);
+    }
   }
 
-  // POST /admin/team/:id/suspend
   async function handleSuspendConfirm() {
     if (!targetMember) return;
     setActionPending(targetMember.id);
     setConfirmOpen(false);
+    setActionError(null);
 
-    await new Promise((r) => setTimeout(r, 700));
-
-    setData((prev) =>
-      prev.map((m) => (m.id === targetMember.id ? { ...m, status: "SUSPENDED" as TeamMemberStatus } : m))
-    );
-    console.log(`[ENDPOINT API MOCK] POST /admin/team/${targetMember.id}/suspend SUCCESS`);
-
-    setActionPending(null);
-    setTargetMember(null);
-    setConfirmType(null);
+    try {
+      const updated = await suspendAdminTeamMemberAction(targetMember.id);
+      setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      setTargetMember(null);
+      setConfirmType(null);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossible de suspendre ce compte.");
+    } finally {
+      setActionPending(null);
+    }
   }
 
-  // POST /admin/team/:id/reactivate
   async function handleReactivateConfirm() {
     if (!targetMember) return;
     setActionPending(targetMember.id);
     setConfirmOpen(false);
+    setActionError(null);
 
-    await new Promise((r) => setTimeout(r, 700));
-
-    setData((prev) =>
-      prev.map((m) => (m.id === targetMember.id ? { ...m, status: "ACTIVE" as TeamMemberStatus } : m))
-    );
-    console.log(`[ENDPOINT API MOCK] POST /admin/team/${targetMember.id}/reactivate SUCCESS`);
-
-    setActionPending(null);
-    setTargetMember(null);
-    setConfirmType(null);
+    try {
+      const updated = await reactivateAdminTeamMemberAction(targetMember.id);
+      setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      setTargetMember(null);
+      setConfirmType(null);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossible de réactiver ce compte.");
+    } finally {
+      setActionPending(null);
+    }
   }
 
-  // Renvoyer invitation (MOCK API)
   async function handleResendConfirm() {
     if (!targetMember) return;
     setActionPending(targetMember.id);
     setConfirmOpen(false);
+    setActionError(null);
 
-    await new Promise((r) => setTimeout(r, 800));
-    console.log(`[ENDPOINT API MOCK] POST /admin/team/invitations/resend TO ${targetMember.email} SUCCESS`);
-
-    setActionPending(null);
-    setTargetMember(null);
-    setConfirmType(null);
+    try {
+      const updated = await resendAdminInvitationAction(targetMember.id);
+      setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      setTargetMember(null);
+      setConfirmType(null);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossible de renvoyer l'invitation.");
+    } finally {
+      setActionPending(null);
+    }
   }
 
   const triggerConfirm = (type: "suspend" | "reactivate" | "resend", member: TeamMember) => {
@@ -295,7 +304,6 @@ export default function TeamPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ADMIN">Administrateur</SelectItem>
-            <SelectItem value="MODERATOR">Modérateur</SelectItem>
           </SelectContent>
         </Select>
       ),
@@ -444,6 +452,12 @@ export default function TeamPage() {
           </span>
         )}
       </div>
+
+      {actionError ? (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      ) : null}
 
       {/* ── 4. Table ───────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto rounded-xl border border-border/60">
@@ -681,7 +695,6 @@ export default function TeamPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="MODERATOR">Modérateur (Gestion opérationnelle courante)</SelectItem>
                 <SelectItem value="ADMIN">Administrateur (Contrôle total du back-office)</SelectItem>
               </SelectContent>
             </Select>

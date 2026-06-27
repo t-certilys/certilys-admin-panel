@@ -10,6 +10,8 @@ export interface TeamMember {
   twoFactorEnabled: boolean;
   lastLoginAt: string | null;
   avatarUrl?: string;
+  invitedAt?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface TeamKpis {
