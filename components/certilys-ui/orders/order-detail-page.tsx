@@ -40,7 +40,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ActionType = "sync-payment" | "mark-review" | "revoke-access";
+type ActionType = "sync-payment" | "mark-review" | "revoke-access" | "refund";
 
 interface ActionDialogState {
   open: boolean;
@@ -60,7 +60,7 @@ const ACTION_CONFIG: Record<
     reasonLabel: string;
     reasonPlaceholder: string;
     variant: "default" | "destructive";
-    auditEvent: "PAYMENT_SYNC_REQUESTED" | "ORDER_MARKED_FOR_REVIEW" | "ACCESS_REVOKED";
+    auditEvent: "PAYMENT_SYNC_REQUESTED" | "ORDER_MARKED_FOR_REVIEW" | "ACCESS_REVOKED" | "ORDER_REFUNDED";
     icon: IconSvgElement;
   }
 > = {
@@ -100,6 +100,19 @@ const ACTION_CONFIG: Record<
     auditEvent: "ACCESS_REVOKED",
     icon: LockKeyIcon,
   },
+  refund: {
+    label: "Marquer la commande comme remboursée",
+    description:
+      "Le remboursement de l'argent doit déjà avoir été effectué manuellement sur la passerelle (Paygride / Moneroo). Cette action ne déplace AUCUN argent : elle enregistre le remboursement (commande et paiement en « Remboursée »), révoque l'accès de l'apprenant, et déduit la part du formateur de son solde.",
+    confirmLabel: "Confirmer le remboursement",
+    requiresReason: true,
+    reasonLabel: "Motif du remboursement (obligatoire)",
+    reasonPlaceholder:
+      "Ex. demande client sous 24h, doublon de paiement… (min 10 caractères)",
+    variant: "destructive",
+    auditEvent: "ORDER_REFUNDED",
+    icon: Coins01Icon,
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,6 +134,7 @@ async function simulateApiCall(
     "sync-payment": "sync-payment",
     "mark-review": "mark-for-review",
     "revoke-access": "revoke-access",
+    refund: "refund",
   };
 
   const endpoint = `/admin/orders/${id}/${endpointMap[type]}`;
@@ -234,6 +248,27 @@ export default function OrderDetailPage() {
               title: "Signalement pour vérification",
               date: new Date().toISOString(),
               description: "Commande marquée pour examen manuel des équipes financières.",
+            },
+            ...prev.events,
+          ];
+        } else if (dialog.type === "refund") {
+          updated.orderStatus = "REFUNDED";
+          updated.paymentStatus = "REFUNDED";
+          updated.accessStatus = "REVOKED";
+          updated.paiement = {
+            ...prev.paiement,
+            refundedAt: new Date().toISOString(),
+          };
+          updated.access = {
+            ...prev.access,
+            revokedAt: new Date().toISOString(),
+            revocationReason: `Remboursement : ${reason}`,
+          };
+          updated.events = [
+            {
+              title: "Commande remboursée",
+              date: new Date().toISOString(),
+              description: `Remboursement enregistré (effectué manuellement sur la passerelle). Accès révoqué et part formateur (${formatXOF(prev.netInstructorXOF)}) déduite de son solde. Motif : ${reason}`,
             },
             ...prev.events,
           ];
@@ -390,6 +425,25 @@ export default function OrderDetailPage() {
               Révoquer l'accès
             </Button>
           )}
+
+          {order.orderStatus === "PAID" &&
+            order.paymentStatus === "COMPLETED" && (
+              <Button
+                id="btn-detail-refund"
+                variant="outline"
+                size="sm"
+                className="gap-2 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+                onClick={() => openAction("refund")}
+              >
+                <HugeiconsIcon
+                  icon={Coins01Icon}
+                  className="size-4"
+                  size={16}
+                  strokeWidth={1.5}
+                />
+                Marquer remboursé
+              </Button>
+            )}
         </div>
       </div>
 
@@ -651,25 +705,25 @@ export default function OrderDetailPage() {
               <div>
                 <span className="text-xs text-muted-foreground block">ID Inscription (Enrollment)</span>
                 <span className="font-mono text-sm text-foreground block mt-0.5">
-                  {order.access.enrollmentId ?? "—"}
+                  {order.access.enrollmentId ?? "-"}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Progression pédagogique</span>
                 <span className="font-medium text-foreground block mt-0.5 tabular-nums">
-                  {order.access.progressPercent !== undefined ? `${order.access.progressPercent}%` : "—"}
+                  {order.access.progressPercent !== undefined ? `${order.access.progressPercent}%` : "-"}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Créé le</span>
                 <span className="text-foreground text-xs block mt-0.5">
-                  {order.access.createdAt ? formatDate(order.access.createdAt) : "—"}
+                  {order.access.createdAt ? formatDate(order.access.createdAt) : "-"}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Révoqué le</span>
                 <span className="text-foreground text-xs block mt-0.5">
-                  {order.access.revokedAt ? formatDate(order.access.revokedAt) : "—"}
+                  {order.access.revokedAt ? formatDate(order.access.revokedAt) : "-"}
                 </span>
               </div>
             </div>
@@ -693,13 +747,21 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-muted-foreground">Origine de la vente</span>
+              <span className="font-medium text-foreground text-sm">
+                {order.channel === "LINK"
+                  ? "Lien du formateur"
+                  : "Amené par Certilys"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b pb-3">
               <span className="text-muted-foreground">Taux de commission Certilys</span>
               <span className="font-bold text-foreground text-sm">{order.commissionRate}%</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="rounded-lg bg-blue-500/5 border border-blue-500/10 p-3">
-                <span className="text-xs text-blue-600 font-medium block">Commission Certilys (15%)</span>
+                <span className="text-xs text-blue-600 font-medium block">Commission Certilys ({order.commissionRate}%)</span>
                 <span className="text-lg font-bold text-blue-600 block mt-1 tabular-nums">
                   {formatXOF(order.commissionXOF)}
                 </span>
@@ -707,7 +769,7 @@ export default function OrderDetailPage() {
               </div>
 
               <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/10 p-3">
-                <span className="text-xs text-emerald-600 font-medium block">Net versé au Formateur (85%)</span>
+                <span className="text-xs text-emerald-600 font-medium block">Net versé au Formateur ({100 - order.commissionRate}%)</span>
                 <span className="text-lg font-bold text-emerald-600 block mt-1 tabular-nums">
                   {formatXOF(order.netInstructorXOF)}
                 </span>
@@ -745,7 +807,7 @@ export default function OrderDetailPage() {
             <div>
               <span className="text-xs text-muted-foreground block">Date du paiement</span>
               <span className="text-sm text-foreground block mt-0.5">
-                {order.paiement.paidAt ? formatDate(order.paiement.paidAt) : "—"}
+                {order.paiement.paidAt ? formatDate(order.paiement.paidAt) : "-"}
               </span>
             </div>
           </div>

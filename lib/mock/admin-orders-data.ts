@@ -2,7 +2,12 @@
 // Types supervision Commandes et Paiements
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type OrderStatus = "INITIATED" | "PAID" | "CANCELLED" | "EXPIRED";
+export type OrderStatus =
+  | "INITIATED"
+  | "PAID"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "REFUNDED";
 
 export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
 
@@ -39,8 +44,9 @@ export interface AdminOrder {
   amountXOF: number;       // Montant brut de la formation
   discountXOF: number;     // Remise appliquée
   totalXOF: number;        // Total net payé
-  commissionRate: number;  // Taux de commission, ex: 15
-  commissionXOF: number;   // Part Certilys (15% du totalXOF)
+  channel: "LINK" | "PLATFORM"; // Origine : lien formateur (Certilys 40%) ou Certilys (70%)
+  commissionRate: number;  // Taux de commission Certilys (40 ou 70 selon le canal)
+  commissionXOF: number;   // Part Certilys (commissionRate % du totalXOF)
   netInstructorXOF: number;// Part formateur (totalXOF - commissionXOF)
   apprenant: {
     name: string;
@@ -118,6 +124,7 @@ export const orderStatusConfig: Record<
   PAID: { label: "Payée", dotClass: "bg-emerald-500", colorClass: "text-emerald-600 border-emerald-500/20 bg-emerald-500/5" },
   CANCELLED: { label: "Annulée", dotClass: "bg-red-500", colorClass: "text-red-600 border-red-500/20 bg-red-500/5" },
   EXPIRED: { label: "Expirée", dotClass: "bg-neutral-400", colorClass: "text-neutral-600 border-border bg-neutral-500/5" },
+  REFUNDED: { label: "Remboursée", dotClass: "bg-amber-500", colorClass: "text-amber-600 border-amber-500/20 bg-amber-500/5" },
 };
 
 export const paymentStatusConfig: Record<
@@ -155,9 +162,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 185000,
     discountXOF: 15000,
     totalXOF: 170000,
-    commissionRate: 15,
-    commissionXOF: 25500,
-    netInstructorXOF: 144500,
+    channel: "LINK",
+    commissionRate: 40,
+    commissionXOF: 68000,
+    netInstructorXOF: 102000,
     apprenant: {
       name: "Amadou Diallo",
       email: "amadou.diallo@gmail.com",
@@ -227,9 +235,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 250000,
     discountXOF: 0,
     totalXOF: 250000,
-    commissionRate: 15,
-    commissionXOF: 37500,
-    netInstructorXOF: 212500,
+    channel: "PLATFORM",
+    commissionRate: 70,
+    commissionXOF: 175000,
+    netInstructorXOF: 75000,
     apprenant: {
       name: "Fatou Ndiaye",
       email: "fatou.ndiaye@yahoo.fr",
@@ -286,9 +295,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 120000,
     discountXOF: 0,
     totalXOF: 120000,
-    commissionRate: 15,
-    commissionXOF: 18000,
-    netInstructorXOF: 102000,
+    channel: "LINK",
+    commissionRate: 40,
+    commissionXOF: 48000,
+    netInstructorXOF: 72000,
     apprenant: {
       name: "Koffi Mensah",
       email: "koffi.mensah@gmail.com",
@@ -356,9 +366,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 320000,
     discountXOF: 40000,
     totalXOF: 280000,
-    commissionRate: 15,
-    commissionXOF: 42000,
-    netInstructorXOF: 238000,
+    channel: "PLATFORM",
+    commissionRate: 70,
+    commissionXOF: 196000,
+    netInstructorXOF: 84000,
     apprenant: {
       name: "Awa Traoré",
       email: "awa.traore@outlook.com",
@@ -419,9 +430,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 95000,
     discountXOF: 0,
     totalXOF: 95000,
-    commissionRate: 15,
-    commissionXOF: 14250,
-    netInstructorXOF: 80750,
+    channel: "LINK",
+    commissionRate: 40,
+    commissionXOF: 38000,
+    netInstructorXOF: 57000,
     apprenant: {
       name: "Ibrahim Coulibaly",
       email: "ibrahim.coulibaly@gmail.com",
@@ -494,9 +506,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 185000,
     discountXOF: 0,
     totalXOF: 185000,
-    commissionRate: 15,
-    commissionXOF: 27750,
-    netInstructorXOF: 157250,
+    channel: "PLATFORM",
+    commissionRate: 70,
+    commissionXOF: 129500,
+    netInstructorXOF: 55500,
     apprenant: {
       name: "Bamba Fofana",
       email: "bamba.fofana@gmail.com",
@@ -560,9 +573,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 150000,
     discountXOF: 15000,
     totalXOF: 135000,
-    commissionRate: 15,
-    commissionXOF: 20250,
-    netInstructorXOF: 114750,
+    channel: "LINK",
+    commissionRate: 40,
+    commissionXOF: 54000,
+    netInstructorXOF: 81000,
     apprenant: {
       name: "Marie-Louise Dupont",
       email: "ml.dupont@gmail.com",
@@ -622,9 +636,10 @@ export const mockOrders: AdminOrder[] = [
     amountXOF: 250000,
     discountXOF: 0,
     totalXOF: 250000,
-    commissionRate: 15,
-    commissionXOF: 37500,
-    netInstructorXOF: 212500,
+    channel: "PLATFORM",
+    commissionRate: 70,
+    commissionXOF: 175000,
+    netInstructorXOF: 75000,
     apprenant: {
       name: "Alioune Badara",
       email: "badara.alioune@gmail.com",
@@ -700,7 +715,7 @@ export const courseReviewKpis = [
   {
     id: "commission-certilys",
     label: "Commission Certilys",
-    value: formatXOF(162750), // 15% du CA brut
+    value: formatXOF(458500), // Commissions cumulées des commandes payées (modèle 40/70 selon canal)
     colorClass: "text-blue-600",
     iconBg: "bg-blue-50",
     status: "",
