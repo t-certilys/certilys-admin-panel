@@ -40,6 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppDialog, DecisionDialog, InternalProfileDialog } from "@/components/certilys-ui/dialogs";
+import { toast } from "sonner";
 import {
   inviteAdminTeamMemberAction,
   reactivateAdminTeamMemberAction,
@@ -226,8 +227,10 @@ export default function TeamPage({ initialMembers, initialKpis }: TeamPageProps)
       setData((prev) => [invited, ...prev.filter((item) => item.email !== invited.email)]);
       setNewMember({ name: "", email: "", role: "ADMIN" });
       setInviteOpen(false);
+      toast.success("Invitation envoyée avec succès.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Impossible d'envoyer l'invitation.");
+      toast.error(error instanceof Error ? error.message : "Impossible d'envoyer l'invitation.");
     } finally {
       setActionPending(null);
     }
@@ -244,8 +247,10 @@ export default function TeamPage({ initialMembers, initialKpis }: TeamPageProps)
       setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       setTargetMember(null);
       setConfirmType(null);
+      toast.success("Compte suspendu avec succès.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Impossible de suspendre ce compte.");
+      toast.error(error instanceof Error ? error.message : "Impossible de suspendre ce compte.");
     } finally {
       setActionPending(null);
     }
@@ -262,8 +267,10 @@ export default function TeamPage({ initialMembers, initialKpis }: TeamPageProps)
       setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       setTargetMember(null);
       setConfirmType(null);
+      toast.success("Compte réactivé avec succès.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Impossible de réactiver ce compte.");
+      toast.error(error instanceof Error ? error.message : "Impossible de réactiver ce compte.");
     } finally {
       setActionPending(null);
     }
@@ -280,8 +287,10 @@ export default function TeamPage({ initialMembers, initialKpis }: TeamPageProps)
       setData((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       setTargetMember(null);
       setConfirmType(null);
+      toast.success("Invitation renvoyée avec succès.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Impossible de renvoyer l'invitation.");
+      toast.error(error instanceof Error ? error.message : "Impossible de renvoyer l'invitation.");
     } finally {
       setActionPending(null);
     }

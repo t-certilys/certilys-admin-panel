@@ -50,12 +50,12 @@ import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
   type AdminOrder,
-  mockOrders,
   paymentStatusConfig,
   accessStatusConfig,
   formatXOF,
   formatDate,
 } from "@/lib/mock/admin-orders-data";
+import { getAdminOrdersAction } from "@/lib/admin-orders-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types actions sensibles
@@ -213,11 +213,31 @@ export default function OrdersPage() {
     setPaymentStatusParam(null);
   }, [setPaymentStatusParam]);
 
-  // Loading initial simulé
+  // Chargement depuis l'API
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [data, setData] = React.useState<AdminOrder[]>([]);
+
   React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    getAdminOrdersAction()
+      .then((orders) => {
+        if (!cancelled) setData(orders);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setLoadError(
+            err instanceof Error ? err.message : "Impossible de charger les commandes.",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Dialogue d'action
@@ -229,9 +249,6 @@ export default function OrdersPage() {
     loading: false,
     error: null,
   });
-
-  // Données dynamiques mockées réactives aux actions locales
-  const [data, setData] = React.useState<AdminOrder[]>(mockOrders);
 
   // ── Calcul dynamique des KPIs
   const kpis = React.useMemo(() => {
