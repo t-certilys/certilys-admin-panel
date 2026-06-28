@@ -31,11 +31,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import {
+  disableAdminUserTwoFactorAction,
+  getAdminUserAction,
+  reactivateAdminUserAction,
+  suspendAdminUserAction,
+} from "@/lib/admin-users-actions";
 
 import {
   type AdminUser,
   type AccountStatus,
-  mockAdminUsers,
   USER_ROLE_CONFIG,
   ACCOUNT_STATUS_CONFIG,
   formatDate,
@@ -109,32 +114,6 @@ const ACTION_CONFIG: Record<
     auditEvent: "TWO_FACTOR_DISABLED_BY_ADMIN",
   },
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Simulation API
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function simulateApiCall(
-  type: SensitiveAction,
-  userId: string,
-  reason?: string,
-): Promise<void> {
-  await new Promise((r) => setTimeout(r, 1200));
-  if (Math.random() < 0.03) {
-    throw new Error("Erreur serveur. Veuillez réessayer.");
-  }
-  const endpointMap: Record<SensitiveAction, string> = {
-    suspend: `/admin/users/${userId}/suspend`,
-    reactivate: `/admin/users/${userId}/reactivate`,
-    "disable-2fa": `/admin/users/${userId}/disable-2fa`,
-  };
-  console.log(`[AUDIT] ${ACTION_CONFIG[type].auditEvent}`, {
-    userId,
-    reason,
-    endpoint: endpointMap[type],
-    timestamp: new Date().toISOString(),
-  });
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Badges
@@ -269,12 +248,25 @@ export default function UserDetailPage() {
   const [loadError, setLoadError] = React.useState(false);
 
   React.useEffect(() => {
-    const found = mockAdminUsers.find((u) => u.id === id);
-    if (found) {
-      setUser(JSON.parse(JSON.stringify(found)));
-    } else {
-      setLoadError(true);
-    }
+    let cancelled = false;
+
+    getAdminUserAction(id)
+      .then((found) => {
+        if (cancelled) return;
+        if (found) {
+          setUser(found);
+          setLoadError(false);
+          return;
+        }
+        setLoadError(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   // Dialog
@@ -302,36 +294,14 @@ export default function UserDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      await simulateApiCall(dialog.type, user.id, reason);
+      const updated =
+        dialog.type === "suspend"
+          ? await suspendAdminUserAction(user.id, reason)
+          : dialog.type === "reactivate"
+            ? await reactivateAdminUserAction(user.id)
+            : await disableAdminUserTwoFactorAction(user.id, reason);
 
-      setUser((prev) => {
-        if (!prev) return prev;
-        if (dialog.type === "suspend") {
-          return {
-            ...prev,
-            status: "SUSPENDED" as AccountStatus,
-            suspendedAt: new Date().toISOString(),
-            suspensionReason: reason,
-            suspendedBy: "admin@certilys.com",
-          };
-        }
-        if (dialog.type === "reactivate") {
-          return {
-            ...prev,
-            status: "ACTIVE" as AccountStatus,
-            suspendedAt: undefined,
-            suspensionReason: undefined,
-            suspendedBy: undefined,
-          };
-        }
-        if (dialog.type === "disable-2fa") {
-          return {
-            ...prev,
-            security: { ...prev.security, twoFactorEnabled: false },
-          };
-        }
-        return prev;
-      });
+      setUser(updated);
 
       setDialog((prev) => ({ ...prev, open: false, loading: false, success: true }));
     } catch (err) {

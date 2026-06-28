@@ -39,12 +39,19 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCsvForExcel } from "@/lib/csv-export";
+import {
+  getAdminUsersAction,
+  reactivateAdminUserAction,
+  suspendAdminUserAction,
+  type AdminUsersKpis,
+} from "@/lib/admin-users-actions";
 
 import {
+  type AdminUser,
   type AccountStatus,
   type UserRole,
-  mockAdminUsers,
   userKpis,
+  type UserKpi,
   USER_ROLE_CONFIG,
   ACCOUNT_STATUS_CONFIG,
   formatDateTime,
@@ -94,10 +101,21 @@ const KPI_ICONS: Record<string, IconSvgElement> = {
   "2fa": LockPasswordIcon,
 };
 
-function UserKpiCards() {
+function buildUserKpis(kpis: AdminUsersKpis | null): UserKpi[] {
+  return userKpis.map((item) => {
+    if (!kpis) return { ...item, value: 0 };
+    if (item.id === "total") return { ...item, value: kpis.total };
+    if (item.id === "active") return { ...item, value: kpis.active };
+    if (item.id === "suspended") return { ...item, value: kpis.suspended };
+    if (item.id === "2fa") return { ...item, value: kpis.twoFactor };
+    return item;
+  });
+}
+
+function UserKpiCards({ kpis }: { kpis: AdminUsersKpis | null }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {userKpis.map((kpi) => {
+      {buildUserKpis(kpis).map((kpi) => {
         const Icon = KPI_ICONS[kpi.id];
         return (
           <Card
@@ -309,15 +327,35 @@ export default function UsersPage() {
     setStatusParam(null);
   }, [setStatusParam]);
 
-  // ── Loading initial simulé
+  // ── Données API
   const [loading, setLoading] = React.useState(true);
-  React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [data, setData] = React.useState<AdminUser[]>([]);
+  const [kpis, setKpis] = React.useState<AdminUsersKpis | null>(null);
+
+  const refreshUsers = React.useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await getAdminUsersAction();
+      setData(response.users);
+      setKpis(response.kpis);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger les utilisateurs.",
+      );
+      setData([]);
+      setKpis(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ── État local des données (pour suspension/réactivation mock)
-  const [data, setData] = React.useState(mockAdminUsers);
+  React.useEffect(() => {
+    void refreshUsers();
+  }, [refreshUsers]);
 
   // ── État de l'action en cours (suspend/reactivate inline)
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
@@ -368,51 +406,34 @@ export default function UsersPage() {
     });
   }, [data, searchValue, filterValues]);
 
-  // ── Actions Suspendre / Réactiver (mock)
+  // ── Actions Suspendre / Réactiver
   async function handleSuspend(userId: string) {
     setPendingAction(userId);
-    await new Promise((r) => setTimeout(r, 900));
-    setData((prev) =>
-      prev.map((u) =>
-        u.id === userId
-          ? {
-              ...u,
-              status: "SUSPENDED" as AccountStatus,
-              suspendedAt: new Date().toISOString(),
-              suspensionReason: "Suspension manuelle par l'administrateur.",
-              suspendedBy: "admin@certilys.com",
-            }
-          : u,
-      ),
-    );
-    console.log("[AUDIT] USER_SUSPENDED", {
-      userId,
-      timestamp: new Date().toISOString(),
-    });
-    setPendingAction(null);
+    try {
+      const updated = await suspendAdminUserAction(
+        userId,
+        "Suspension manuelle depuis le panneau administrateur.",
+      );
+      setData((prev) =>
+        prev.map((user) => (user.id === userId ? updated : user)),
+      );
+      await refreshUsers();
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function handleReactivate(userId: string) {
     setPendingAction(userId);
-    await new Promise((r) => setTimeout(r, 900));
-    setData((prev) =>
-      prev.map((u) =>
-        u.id === userId
-          ? {
-              ...u,
-              status: "ACTIVE" as AccountStatus,
-              suspendedAt: undefined,
-              suspensionReason: undefined,
-              suspendedBy: undefined,
-            }
-          : u,
-      ),
-    );
-    console.log("[AUDIT] USER_REACTIVATED", {
-      userId,
-      timestamp: new Date().toISOString(),
-    });
-    setPendingAction(null);
+    try {
+      const updated = await reactivateAdminUserAction(userId);
+      setData((prev) =>
+        prev.map((user) => (user.id === userId ? updated : user)),
+      );
+      await refreshUsers();
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   // ── Export CSV
@@ -609,7 +630,7 @@ export default function UsersPage() {
       </div>
 
       {/* ── 2. KPI compacts ────────────────────────────────────────────────── */}
-      <UserKpiCards />
+      <UserKpiCards kpis={kpis} />
 
       {/* ── 3. Recherche + filtres ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -631,6 +652,12 @@ export default function UsersPage() {
           </span>
         )}
       </div>
+
+      {loadError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+          {loadError}
+        </div>
+      ) : null}
 
       {/* ── 4. Table ───────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto rounded-xl border border-border/60">
