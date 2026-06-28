@@ -41,12 +41,16 @@ export async function adminMutation<T>(
   body?: Record<string, unknown>,
 ): Promise<T> {
   const csrf = await getCsrf();
+  const cookieHeader = mergeCookieHeader(
+    await currentCookieHeader(),
+    csrf.setCookieHeaders,
+  );
   const response = await fetch(`${BACKEND_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf.token,
-      Cookie: await currentCookieHeader(),
+      Cookie: cookieHeader,
     },
     body: body ? JSON.stringify(body) : "{}",
     cache: "no-store",
@@ -63,9 +67,10 @@ async function getCsrf() {
     },
     cache: "no-store",
   });
+  const setCookieHeaders = getSetCookieHeaders(response.headers);
   await storeResponseCookies(response);
   const body = (await response.json()) as { csrfToken: string };
-  return { token: body.csrfToken };
+  return { token: body.csrfToken, setCookieHeaders };
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -133,4 +138,29 @@ function getSetCookieHeaders(headers: Headers) {
 
   const single = headers.get("set-cookie");
   return single ? [single] : [];
+}
+
+function mergeCookieHeader(
+  currentHeader: string,
+  setCookieHeaders: string[],
+) {
+  const cookies = new Map<string, string>();
+
+  for (const cookie of currentHeader.split(";")) {
+    const [rawName, ...rawValueParts] = cookie.trim().split("=");
+    if (!rawName) continue;
+    cookies.set(rawName, rawValueParts.join("="));
+  }
+
+  for (const header of setCookieHeaders) {
+    const [pair] = header.split(";");
+    const [rawName, ...rawValueParts] = pair.split("=");
+    const name = rawName.trim();
+    if (!name) continue;
+    cookies.set(name, rawValueParts.join("="));
+  }
+
+  return Array.from(cookies.entries())
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
 }

@@ -15,7 +15,7 @@ import {
   getInvitationDetails,
   acceptInvitation,
   rejectInvitation,
-  InvitationDetails,
+  type InvitationDetails,
 } from "@/lib/invitation-actions";
 import { toast } from "sonner";
 
@@ -31,9 +31,13 @@ export default function InvitationConfirmation() {
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
 
   useEffect(() => {
-    // Si pas de token, on simule "token_valid" pour les tests UI faciles
-    const invitationToken = token || "token_valid";
-    fetchDetails(invitationToken);
+    if (!token) {
+      setError("Lien d'invitation invalide ou incomplet.");
+      setLoading(false);
+      return;
+    }
+
+    void fetchDetails(token);
   }, [token]);
 
   const fetchDetails = async (tokenOrId: string) => {
@@ -51,7 +55,7 @@ export default function InvitationConfirmation() {
             "Impossible de récupérer les détails de l'invitation.",
         );
       }
-    } catch (err) {
+    } catch {
       setError("Erreur de communication avec le serveur.");
     } finally {
       setLoading(false);
@@ -59,21 +63,18 @@ export default function InvitationConfirmation() {
   };
 
   const handleAccept = async () => {
-    const invitationToken = token || "token_valid";
-
     try {
       setAccepting(true);
 
-      const response = await acceptInvitation(invitationToken);
+      const response = await acceptInvitation(token);
 
       if (response.success) {
         toast.success(response.message);
-        // Redirection vers le login passwordless
         router.push("/auth/login");
       } else {
         toast.error(response.message);
       }
-    } catch (err) {
+    } catch {
       toast.error("Erreur lors de l'acceptation.");
     } finally {
       setAccepting(false);
@@ -81,12 +82,10 @@ export default function InvitationConfirmation() {
   };
 
   const handleReject = async () => {
-    const invitationToken = token || "token_valid";
-
     try {
       setRejecting(true);
 
-      const response = await rejectInvitation(invitationToken);
+      const response = await rejectInvitation(token);
 
       if (response.success) {
         toast.success(response.message);
@@ -94,7 +93,7 @@ export default function InvitationConfirmation() {
       } else {
         toast.error(response.message);
       }
-    } catch (err) {
+    } catch {
       toast.error("Erreur lors du rejet.");
     } finally {
       setRejecting(false);
@@ -147,7 +146,7 @@ export default function InvitationConfirmation() {
             />
 
             <h1 className="text-2xl font-bold font-sora">
-              Invitation Invalide
+              Invitation invalide
             </h1>
 
             <p className="text-gray-400 text-sm">{error}</p>
@@ -168,7 +167,6 @@ export default function InvitationConfirmation() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Section - Pattern + Illustration */}
       <div className="hidden lg:flex lg:w-1/2 auth-pattern items-center justify-center p-12 relative overflow-hidden">
         <Image
           src="/images/illustrations/Invite-cuate.svg"
@@ -180,25 +178,22 @@ export default function InvitationConfirmation() {
         />
       </div>
 
-      {/* Right Section - Content on black background */}
       <div className="w-full lg:w-1/2 bg-black text-white flex items-center justify-center p-8 lg:p-12">
         <div className="max-w-md w-full">
-          {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl lg:text-4xl font-bold font-sora mb-4 leading-tight">
-              Invitation d'administration{" "}
+              Invitation d&apos;administration{" "}
               <span className="text-primary">Certilys</span>
             </h1>
 
             <p className="text-gray-400 text-sm">
               Vous avez été invité par{" "}
               <strong className="text-white">{invitation?.inviterName}</strong>{" "}
-              à rejoindre l'équipe d'administration pour l'espace{" "}
+              à rejoindre l&apos;équipe d&apos;administration pour l&apos;espace{" "}
               <strong className="text-white">{invitation?.teamName}</strong>.
             </p>
           </div>
 
-          {/* Invitation Details Info Card */}
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 mb-8">
             <div className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">
               Email invité
@@ -209,12 +204,11 @@ export default function InvitationConfirmation() {
             </div>
 
             <div className="text-[10px] text-zinc-500 mt-2">
-              L'activation de ce compte est strictement soumise à l'acceptation
+              L&apos;activation de ce compte est strictement soumise à l&apos;acceptation
               de cette invitation avant connexion.
             </div>
           </div>
 
-          {/* Responsibilities */}
           <div className="mb-8 space-y-4">
             <h2 className="text-sm uppercase tracking-wider font-semibold text-zinc-400 mb-2">
               Droits et Responsabilités
@@ -263,7 +257,6 @@ export default function InvitationConfirmation() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col gap-3">
             <Button
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold"
@@ -279,7 +272,7 @@ export default function InvitationConfirmation() {
                     icon={CheckmarkCircle01Icon}
                     className="mr-2 size-5"
                   />
-                  Accepter l'invitation
+                  Accepter l&apos;invitation
                 </>
               )}
             </Button>
@@ -295,16 +288,15 @@ export default function InvitationConfirmation() {
               ) : (
                 <>
                   <HugeiconsIcon icon={Cancel01Icon} className="mr-2 size-5" />
-                  Décliner l'invitation
+                  Décliner l&apos;invitation
                 </>
               )}
             </Button>
           </div>
 
-          {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-xs text-gray-500">
-              Lien expirable à usage unique. Besoin d'aide ?{" "}
+              Lien expirable à usage unique. Besoin d&apos;aide ?{" "}
               <button
                 className="text-primary font-medium hover:underline"
                 onClick={() => router.push("/auth/login")}

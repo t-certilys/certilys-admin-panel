@@ -36,7 +36,7 @@ export default function TwoFactorSetupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [qrCodeImage, setQrCodeImage] = useState("");
+  const [qrCodeSvg, setQrCodeSvg] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [isActivated, setIsActivated] = useState(false);
@@ -58,16 +58,17 @@ export default function TwoFactorSetupForm() {
     async function generateQrCode() {
       if (!qrCodeUrl) return;
       try {
-        const dataUrl = await QRCode.toDataURL(qrCodeUrl, {
+        const svg = await QRCode.toString(qrCodeUrl, {
+          type: "svg",
           errorCorrectionLevel: "M",
           margin: 1,
-          scale: 8,
+          width: 176,
           color: {
             dark: "#020617",
             light: "#ffffff",
           },
         });
-        if (active) setQrCodeImage(dataUrl);
+        if (active) setQrCodeSvg(svg);
       } catch {
         if (active) {
           setErrorMessage(
@@ -91,6 +92,11 @@ export default function TwoFactorSetupForm() {
         setQrCodeUrl(response.qrCodeUrl);
         setSecretKey(response.secretKey);
         setBackupCodes(response.backupCodes);
+      } else {
+        setErrorMessage(
+          response.message ||
+            "Impossible de charger la configuration de double authentification.",
+        );
       }
     } catch {
       setErrorMessage("Échec du chargement des détails de configuration 2FA.");
@@ -152,9 +158,12 @@ export default function TwoFactorSetupForm() {
             {/* Étape 1 : QR Code et Clé */}
             <div className="space-y-4 flex flex-col items-center">
               <div className="border border-border p-3 rounded-xl bg-white shadow-sm flex items-center justify-center">
-                {qrCodeImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrCodeImage} alt="2FA QR Code" className="w-44 h-44" />
+                {qrCodeSvg ? (
+                  <div
+                    aria-label="QR Code 2FA"
+                    className="h-44 w-44 [&_svg]:h-full [&_svg]:w-full"
+                    dangerouslySetInnerHTML={{ __html: qrCodeSvg }}
+                  />
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-lg bg-muted text-center text-xs text-muted-foreground">
                     Génération du QR Code...
