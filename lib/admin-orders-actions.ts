@@ -1,6 +1,6 @@
 "use server";
 
-import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
+import { adminGet, AdminApiError } from "@/lib/admin-api";
 import type {
   AdminOrder,
   OrderStatus,
@@ -27,6 +27,7 @@ type BackendAdminOrder = {
   amountXOF: number;
   discountXOF: number;
   totalXOF: number;
+  salesChannel?: "CERTILYS" | "AFFILIATE";
   commissionRate: number;
   commissionXOF: number;
   netInstructorXOF: number;
@@ -140,6 +141,7 @@ function mapOrder(o: BackendAdminOrder): AdminOrder {
     amountXOF: o.amountXOF,
     discountXOF: o.discountXOF,
     totalXOF: o.totalXOF,
+    channel: o.salesChannel === "AFFILIATE" ? "LINK" : "PLATFORM",
     commissionRate: o.commissionRate,
     commissionXOF: o.commissionXOF,
     netInstructorXOF: o.netInstructorXOF,
