@@ -37,12 +37,10 @@ import {
 } from "@/components/ui/select";
 
 import {
-  mockAuditLogs,
-  getAuditKpis,
+  getAdminAuditLogsAction,
   type AdminAuditLog,
-  type AuditAction,
-  type AuditTargetType,
-} from "@/lib/mock/admin-audit-logs-data";
+  type AuditKpis,
+} from "@/lib/admin-audit-actions";
 import { AppDialog } from "@/components/certilys-ui/dialogs";
 import { downloadCsvForExcel } from "@/lib/csv-export";
 
@@ -50,7 +48,7 @@ import { downloadCsvForExcel } from "@/lib/csv-export";
 // Configurations et Dictionnaires
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ACTION_TRANSLATIONS: Record<AuditAction, { label: string; color: string }> = {
+const ACTION_TRANSLATIONS: Record<string, { label: string; color: string }> = {
   INSTRUCTOR_APPROVED: {
     label: "Formateur approuvé",
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
@@ -122,17 +120,48 @@ const SEVERITY_TRANSLATIONS: Record<
   },
 };
 
-const TARGET_TYPE_TRANSLATIONS: Record<AuditTargetType, string> = {
+const TARGET_TYPE_TRANSLATIONS: Record<string, string> = {
   INSTRUCTOR: "Formateur",
   COURSE: "Formation",
   USER: "Utilisateur",
   ORDER: "Commande",
-  SYSTEM: "Système",
+  SYSTEM: "Syst?me",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page /dashboard/audit-logs
-// ─────────────────────────────────────────────────────────────────────────────
+function getAuditKpis(logs: AdminAuditLog[]): AuditKpis {
+  return {
+    totalCount: logs.length,
+    todayCount: logs.filter((log) => isSameDay(new Date(log.createdAt), new Date())).length,
+    criticalCount: logs.filter((log) => log.severity === "critical").length,
+    revocationsCount: logs.filter((log) =>
+      ["ACCESS_REVOKED", "USER_SUSPENDED"].includes(log.action),
+    ).length,
+  };
+}
+
+function isSameDay(first: Date, second: Date) {
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth() &&
+    first.getDate() === second.getDate()
+  );
+}
+
+function isWithinLastDays(value: Date, days: number) {
+  const threshold = new Date();
+  threshold.setDate(threshold.getDate() - days);
+  return value >= threshold;
+}
+
+function formatAuditDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
 
 export default function AuditLogsPage() {
   // ── États locaux
@@ -146,13 +175,41 @@ export default function AuditLogsPage() {
   });
 
   const [loading, setLoading] = React.useState(true);
-  const [data, setData] = React.useState<AdminAuditLog[]>(mockAuditLogs);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [data, setData] = React.useState<AdminAuditLog[]>([]);
   const [selectedLog, setSelectedLog] = React.useState<AdminAuditLog | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
+    let cancelled = false;
+
+    async function loadAuditLogs() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const response = await getAdminAuditLogsAction();
+        if (cancelled) return;
+        setData(response.logs);
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les journaux d?audit.",
+        );
+        setData([]);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadAuditLogs();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const kpis = React.useMemo(() => getAuditKpis(data), [data]);
@@ -163,7 +220,7 @@ export default function AuditLogsPage() {
     return Array.from(names).sort();
   }, [data]);
 
-  // Filtrage logique des journaux d'audit
+  // Filtrage logique des journaux d?audit
   const filteredLogs = React.useMemo(() => {
     return data.filter((log) => {
       // 1. Recherche globale
@@ -188,20 +245,12 @@ export default function AuditLogsPage() {
       // 4. Filtre par type de cible
       if (filterValues.targetType && log.targetType !== filterValues.targetType) return false;
 
-      // 5. Filtre par criticité
       if (filterValues.severity && log.severity !== filterValues.severity) return false;
 
-      // 6. Filtre par période temporelle
       if (filterValues.period) {
-        const isToday = log.createdAt.includes("29/05/2026");
-        const isSevenDays =
-          log.createdAt.includes("29/05") ||
-          log.createdAt.includes("28/05") ||
-          log.createdAt.includes("27/05") ||
-          log.createdAt.includes("26/05") ||
-          log.createdAt.includes("25/05") ||
-          log.createdAt.includes("24/05") ||
-          log.createdAt.includes("23/05");
+        const createdAt = new Date(log.createdAt);
+        const isToday = isSameDay(createdAt, new Date());
+        const isSevenDays = isWithinLastDays(createdAt, 7);
 
         if (filterValues.period === "today" && !isToday) return false;
         if (filterValues.period === "7days" && !isSevenDays) return false;
@@ -234,7 +283,7 @@ export default function AuditLogsPage() {
 
     const rows = filteredLogs.map((log) => [
       log.id,
-      log.createdAt,
+      formatAuditDate(log.createdAt),
       ACTION_TRANSLATIONS[log.action]?.label || log.action,
       log.adminName,
       log.adminRole,
@@ -317,7 +366,7 @@ export default function AuditLogsPage() {
             <SelectValue placeholder="Toutes les périodes" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="today">Aujourd'hui</SelectItem>
+            <SelectItem value="today">Aujourd?hui</SelectItem>
             <SelectItem value="7days">7 derniers jours</SelectItem>
             <SelectItem value="older">Plus anciens</SelectItem>
           </SelectContent>
@@ -385,7 +434,7 @@ export default function AuditLogsPage() {
           </CardContent>
         </Card>
 
-        {/* KPI 2 : Aujourd'hui */}
+        {/* KPI 2 : Aujourd?hui */}
         <Card className="border-border/60 shadow-none">
           <CardContent className="flex items-center gap-3 px-4 py-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -400,7 +449,7 @@ export default function AuditLogsPage() {
               <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.todayCount}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">Aujourd'hui</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Aujourd?hui</p>
             </div>
           </CardContent>
         </Card>
@@ -448,7 +497,7 @@ export default function AuditLogsPage() {
           onFiltersReset={() =>
             setFilterValues({ action: "", admin: "", targetType: "", period: "", severity: "" })
           }
-          sheetTitle="Filtrer les journaux d'audit"
+          sheetTitle="Filtrer les journaux d?audit"
           className="w-full max-w-sm"
         />
         {activeFilterCount > 0 && (
@@ -460,6 +509,12 @@ export default function AuditLogsPage() {
       </div>
 
       {/* ── 4. Table des Logs d'Audit ─────────────────────────────────────── */}
+      {loadError && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+          {loadError}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-border/60 bg-card">
         <Table>
           <TableHeader className="bg-muted/40">
@@ -509,9 +564,9 @@ export default function AuditLogsPage() {
                       className="size-8 text-muted-foreground/50"
                       size={32}
                     />
-                    <p className="text-sm font-medium">Aucun journal d'audit trouvé</p>
+                    <p className="text-sm font-medium">Aucun journal d?audit trouvé</p>
                     <p className="text-xs text-muted-foreground/80">
-                      Essayez d'ajuster ou de réinitialiser vos filtres.
+                      Essayez d?ajuster ou de réinitialiser vos filtres.
                     </p>
                   </div>
                 </TableCell>
@@ -524,7 +579,7 @@ export default function AuditLogsPage() {
                   <TableRow key={log.id} className="hover:bg-muted/30">
                     {/* Colonne Date & Heure */}
                     <TableCell className="font-medium text-foreground whitespace-nowrap">
-                      {log.createdAt}
+                      {formatAuditDate(log.createdAt)}
                     </TableCell>
 
                     {/* Colonne Action */}
@@ -607,7 +662,7 @@ export default function AuditLogsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         size="lg"
-        title="Détail du journal d'audit"
+        title="Détail du journal d?audit"
         description={selectedLog ? `ID: ${selectedLog.id}` : undefined}
         footer={
           <div className="flex sm:justify-end">
@@ -685,7 +740,7 @@ export default function AuditLogsPage() {
                       Date et heure UTC
                     </label>
                     <p className="font-semibold text-foreground mt-0.5">
-                      {selectedLog.createdAt}
+                      {formatAuditDate(selectedLog.createdAt)}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
                       Format stable SSR / Client
@@ -696,7 +751,7 @@ export default function AuditLogsPage() {
 
               <hr className="border-border/60" />
 
-              {/* Ligne 3: Cible de l'action */}
+              {/* Ligne 3: Cible de l?action */}
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Cible de la décision
@@ -735,10 +790,10 @@ export default function AuditLogsPage() {
               {selectedLog.reason && (
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Justificatif de l'action
+                    Justificatif de l?action
                   </label>
                   <p className="mt-1 p-3 rounded-lg border border-border/60 bg-muted/40 text-xs italic leading-relaxed text-foreground select-text">
-                    "{selectedLog.reason}"
+                    ? {selectedLog.reason} ?
                   </p>
                 </div>
               )}
