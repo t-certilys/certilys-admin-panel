@@ -127,7 +127,7 @@ export default function ProfilePage() {
     try {
       const result = await updateAdminProfileAction({
         displayName: profile.displayName,
-        handle: profile.handle,
+        ...(profile.handle.trim() ? { handle: profile.handle } : {}),
         email: profile.email,
         phoneNumber: profile.phoneNumber,
         bio: profile.bio,

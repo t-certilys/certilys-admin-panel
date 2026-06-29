@@ -25,8 +25,8 @@ export function AddonInput({
       )}
       <Input
         className={cn(
-          prefixAddon && "pl-[calc(theme(spacing.3)+var(--prefix-length))",
-          suffixAddon && "pr-[calc(theme(spacing.3)+var(--suffix-length))]",
+          prefixAddon && "pl-[calc(1.5rem+var(--prefix-length))]",
+          suffixAddon && "pr-[calc(1.5rem+var(--suffix-length))]",
           className
         )}
         style={

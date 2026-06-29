@@ -20,6 +20,7 @@ type BackendInstructorApplication = {
   applicationNotes?: string | null;
   verificationPayload?: VerificationPayload | null;
   publishedCoursesCount?: number;
+  submittedCoursesCount?: number;
   documentAccess?: { endpoint: string; expiresInSeconds: number } | null;
 };
 
@@ -141,7 +142,8 @@ function mapApplication(
     country: verification?.residenceCountry || "Pays non renseigné",
     status: application.applicationStatus,
     submittedAt: application.applicationSubmittedAt ?? null,
-    coursesSubmitted: application.publishedCoursesCount ?? 0,
+    coursesSubmitted:
+      application.submittedCoursesCount ?? application.publishedCoursesCount ?? 0,
     isComplete:
       completeness.hasLegalIdentity &&
       completeness.hasAddress &&

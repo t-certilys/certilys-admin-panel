@@ -884,7 +884,7 @@ export default function InstructorDetailPage() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-2.5">
-            Le détail complet et pédagogique de ces {instructor.coursesSubmitted} formation(s) est consultable dans l&apos;onglet de validation des cours.
+            Le détail complet et pédagogique de ces  {instructor.coursesSubmitted} formation(s) est consultable dans l&apos;onglet de validation des cours.
           </p>
         </CardContent>
       </Card>
