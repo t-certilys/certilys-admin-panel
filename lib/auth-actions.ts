@@ -1,18 +1,35 @@
 "use server";
 
-import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
+import { adminGet, adminMutation, adminPatch, AdminApiError } from "@/lib/admin-api";
 
 export type AdminUser = {
   id: string;
   displayName?: string | null;
   email: string;
   avatarUrl?: string | null;
+  handle?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+  bio?: string | null;
+  website?: string | null;
   role: "ADMIN" | "MODERATOR" | "USER";
   accountStatus: "ACTIVE" | "SUSPENDED" | "PENDING";
   requiresTwoFactorSetup: boolean;
   requiresTwoFactorVerification: boolean;
   twoFactorVerified: boolean;
   invitationAccepted: boolean;
+};
+
+export type AdminProfileUpdateInput = {
+  displayName?: string;
+  handle?: string;
+  email?: string;
+  phoneNumber?: string;
+  bio?: string;
+  website?: string;
+  avatarDataUrl?: string;
+  removeAvatar?: true;
 };
 
 export type AuthStartResponse = {
@@ -154,6 +171,25 @@ export async function getAdminSessionAction(): Promise<AdminUser | null> {
       return null;
     }
     return null;
+  }
+}
+
+export async function updateAdminProfileAction(
+  input: AdminProfileUpdateInput,
+): Promise<{ success: boolean; message: string; user?: AdminUser }> {
+  try {
+    const user = await adminPatch<AdminUser>("/admin/auth/me", input);
+    return {
+      success: true,
+      message: "Profil mis à jour.",
+      user,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Impossible de mettre à jour le profil.";
+    return { success: false, message };
   }
 }
 

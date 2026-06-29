@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Logout01Icon,
   Settings03Icon,
@@ -17,6 +17,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
+import { logoutAdminAction } from "@/lib/auth-actions"
 import { settingsNavMain, backToDashboard } from "../../../lib/settings-nav-config"
 
 interface SettingsBottomDrawerProps {
@@ -26,6 +27,14 @@ interface SettingsBottomDrawerProps {
 
 export function SettingsBottomDrawer({ open, onClose }: SettingsBottomDrawerProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    onClose()
+    await logoutAdminAction()
+    router.replace("/auth/login")
+    router.refresh()
+  }
 
   return (
     <Drawer open={open} onOpenChange={(nextOpen: boolean) => !nextOpen && onClose()}>
@@ -94,9 +103,9 @@ export function SettingsBottomDrawer({ open, onClose }: SettingsBottomDrawerProp
                 </Link>
               </DrawerClose>
               <DrawerClose asChild>
-                <Link
-                  href="/logout"
-                  onClick={onClose}
+                <button
+                  type="button"
+                  onClick={handleLogout}
                   className="flex items-center cursor-pointer gap-3 rounded-lg px-3 py-3 text-sm text-destructive hover:bg-destructive/10 transition-all font-medium"
                 >
                   <HugeiconsIcon
@@ -105,7 +114,7 @@ export function SettingsBottomDrawer({ open, onClose }: SettingsBottomDrawerProp
                     strokeWidth={1.5}
                   />
                   <span>Log out</span>
-                </Link>
+                </button>
               </DrawerClose>
             </section>
           </nav>

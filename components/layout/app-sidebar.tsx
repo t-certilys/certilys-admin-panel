@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Search01Icon, ViewSidebarLeftIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -16,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useCommandPalette } from "@/components/providers/command-provider";
+import { logoutAdminAction } from "@/lib/auth-actions";
 import { dashboardNavConfig } from "../../lib/dashboard-nav-config";
 import type { DashboardNavGroup } from "../../lib/dashboard-nav-config";
 import { Logo } from "../certilys-ui/logo";
@@ -45,10 +47,16 @@ export function AppSidebar({
   user,
   ...props
 }: AppSidebarProps) {
+  const router = useRouter();
   const { state, toggleSidebar } = useSidebar();
   const { toggleSearch } = useCommandPalette();
 
   const isCollapsed = state === "collapsed";
+  const handleLogout = React.useCallback(async () => {
+    await logoutAdminAction();
+    router.replace("/auth/login");
+    router.refresh();
+  }, [router]);
 
   return (
     <Sidebar
@@ -189,7 +197,7 @@ export function AppSidebar({
         >
           {!isCollapsed ? (
             <SidebarGroup className="p-0">
-              <NavUser user={user} />
+              <NavUser user={user} onLogout={handleLogout} />
             </SidebarGroup>
           ) : (
             <Button

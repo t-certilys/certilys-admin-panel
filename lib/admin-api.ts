@@ -40,13 +40,28 @@ export async function adminMutation<T>(
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T> {
+  return adminJsonMutation<T>("POST", path, body);
+}
+
+export async function adminPatch<T>(
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
+  return adminJsonMutation<T>("PATCH", path, body);
+}
+
+async function adminJsonMutation<T>(
+  method: "POST" | "PATCH" | "DELETE",
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
   const csrf = await getCsrf();
   const cookieHeader = mergeCookieHeader(
     await currentCookieHeader(),
     csrf.setCookieHeaders,
   );
   const response = await fetch(`${BACKEND_URL}${path}`, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf.token,

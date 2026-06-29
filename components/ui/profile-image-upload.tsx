@@ -18,7 +18,7 @@ interface ProfileImageUploadProps {
   className?: string;
 }
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_MB = 1;
 
 const sizeMap = {
@@ -46,7 +46,7 @@ export function ProfileImageUpload({
 
   const processFile = (file: File) => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error("Format non supporté. Utilisez JPG, PNG, GIF ou WebP.");
+      toast.error("Format non supporté. Utilisez JPEG, PNG ou WebP.");
       return;
     }
 
@@ -124,7 +124,7 @@ export function ProfileImageUpload({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={handleFileChange}
         disabled={disabled}
@@ -156,7 +156,7 @@ export function ProfileImageUpload({
           )}
         </div>
         <p className="text-xs text-muted-foreground italic">
-          JPG, GIF ou PNG. Max size 1 Mo.
+          JPEG, PNG ou WebP. Taille maximale : 1 Mo.
         </p>
       </div>
     </div>

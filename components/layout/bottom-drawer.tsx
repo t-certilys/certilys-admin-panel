@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logout01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -13,6 +13,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { logoutAdminAction } from "@/lib/auth-actions";
 import { dashboardNavConfig, type DashboardNavGroup } from "../../lib/dashboard-nav-config";
 import { Logo } from "../certilys-ui/logo";
 
@@ -24,6 +25,14 @@ interface BottomDrawerProps {
 
 export function BottomDrawer({ open, onClose, navConfig = dashboardNavConfig }: BottomDrawerProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    onClose();
+    await logoutAdminAction();
+    router.replace("/auth/login");
+    router.refresh();
+  }
 
   return (
     <Drawer
@@ -69,9 +78,9 @@ export function BottomDrawer({ open, onClose, navConfig = dashboardNavConfig }: 
             ))}
             <section className="space-y-1 border-t pt-4">
               <DrawerClose asChild>
-                <Link
-                  href="/logout"
-                  onClick={onClose}
+                <button
+                  type="button"
+                  onClick={handleLogout}
                   className="flex items-center cursor-pointer gap-3 rounded-(--radius) px-3 py-3 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <HugeiconsIcon
@@ -80,7 +89,7 @@ export function BottomDrawer({ open, onClose, navConfig = dashboardNavConfig }: 
                     strokeWidth={1.5}
                   />
                   <span>Log out</span>
-                </Link>
+                </button>
               </DrawerClose>
             </section>
           </nav>

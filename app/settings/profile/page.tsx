@@ -1,59 +1,186 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Mail01Icon,
-  UserIcon,
   InformationCircleIcon,
+  Loading02Icon,
+  Mail01Icon,
   Tick02Icon,
+  UserIcon,
 } from "@hugeicons/core-free-icons";
+import { toast } from "sonner";
 
+import { AddonInput } from "@/components/ui/addon-input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharacterCounter } from "@/components/ui/character-counter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { PhoneInput, type PhoneValue } from "@/components/ui/phone-input";
 import { ProfileImageUpload } from "@/components/ui/profile-image-upload";
-import { CharacterCounter } from "@/components/ui/character-counter";
-import { AddonInput } from "@/components/ui/addon-input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getAdminSessionAction,
+  type AdminUser,
+  updateAdminProfileAction,
+} from "@/lib/auth-actions";
+
+type ProfileFormState = {
+  displayName: string;
+  handle: string;
+  email: string;
+  phoneNumber: PhoneValue;
+  avatarUrl: string;
+  bio: string;
+  website: string;
+};
+
+const emptyProfile: ProfileFormState = {
+  displayName: "",
+  handle: "",
+  email: "",
+  phoneNumber: "" as PhoneValue,
+  avatarUrl: "",
+  bio: "",
+  website: "",
+};
+
+function profileFromUser(user: AdminUser): ProfileFormState {
+  return {
+    displayName: user.displayName?.trim() || user.email.split("@")[0] || "",
+    handle: user.handle ?? "",
+    email: user.email,
+    phoneNumber: (user.phoneNumber ?? "") as PhoneValue,
+    avatarUrl: user.avatarUrl ?? "",
+    bio: user.bio ?? "",
+    website: (user.website ?? "").replace(/^https?:\/\//i, ""),
+  };
+}
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [phone, setPhone] = React.useState<PhoneValue>("" as PhoneValue);
-  const [avatar, setAvatar] = React.useState<string>("https://api.dicebear.com/9.x/avataaars/svg?seed=murgo");
-  const [bio, setBio] = React.useState("Developer passionate about design and user experience. Creator of Murgodash.");
+  const [user, setUser] = React.useState<AdminUser | null>(null);
+  const [profile, setProfile] = React.useState<ProfileFormState>(emptyProfile);
+  const [initialProfile, setInitialProfile] = React.useState<ProfileFormState>(emptyProfile);
+  const [removeAvatar, setRemoveAvatar] = React.useState(false);
 
-  const handleSave = () => {
+  React.useEffect(() => {
+    let mounted = true;
+
+    getAdminSessionAction()
+      .then((session) => {
+        if (!mounted) return;
+        if (!session) {
+          toast.error("Session administrateur expirée.");
+          return;
+        }
+        const nextProfile = profileFromUser(session);
+        setUser(session);
+        setProfile(nextProfile);
+        setInitialProfile(nextProfile);
+      })
+      .catch(() => {
+        if (mounted) {
+          toast.error("Impossible de charger le profil administrateur.");
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const updateProfile = React.useCallback(
+    <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
+      setProfile((current) => ({ ...current, [key]: value }));
+    },
+    [],
+  );
+
+  const resetForm = React.useCallback(() => {
+    setProfile(initialProfile);
+    setRemoveAvatar(false);
+  }, [initialProfile]);
+
+  const handleAvatarChange = React.useCallback((value: string) => {
+    updateProfile("avatarUrl", value);
+    setRemoveAvatar(false);
+  }, [updateProfile]);
+
+  const handleAvatarReset = React.useCallback(() => {
+    updateProfile("avatarUrl", "");
+    setRemoveAvatar(true);
+  }, [updateProfile]);
+
+  const handleSave = React.useCallback(async () => {
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 2000);
-  };
+    try {
+      const result = await updateAdminProfileAction({
+        displayName: profile.displayName,
+        handle: profile.handle,
+        email: profile.email,
+        phoneNumber: profile.phoneNumber,
+        bio: profile.bio,
+        website: profile.website,
+        ...(profile.avatarUrl.startsWith("data:")
+          ? { avatarDataUrl: profile.avatarUrl }
+          : {}),
+        ...(removeAvatar ? { removeAvatar: true as const } : {}),
+      });
+
+      if (!result.success || !result.user) {
+        toast.error(result.message || "Impossible de mettre à jour le profil.");
+        return;
+      }
+
+      const nextProfile = profileFromUser(result.user);
+      setUser(result.user);
+      setProfile(nextProfile);
+      setInitialProfile(nextProfile);
+      setRemoveAvatar(false);
+      toast.success("Profil administrateur mis à jour.");
+      router.refresh();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [profile, removeAvatar, router]);
+
+  const fallbackText = profile.displayName || user?.email || "Admin";
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8 max-w-4xl mx-auto w-full pb-24">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Profile</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Profil</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your public information and how others see you.
+          Gérez vos informations administrateur et votre identité visible dans le panel.
         </p>
       </div>
 
       <div className="grid gap-8">
         <Card className="border border-border/50 bg-muted/20">
           <CardHeader>
-            <CardTitle className="text-lg">Profile Picture</CardTitle>
+            <CardTitle className="text-lg">Photo de profil</CardTitle>
             <CardDescription>
-              Click on the avatar to change your photo.
+              Cliquez sur l’avatar pour modifier votre photo.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileImageUpload
-              value={avatar}
-              onChange={setAvatar}
-              onReset={() => setAvatar("")}
-              fallbackText="Murgo Dash"
+              value={profile.avatarUrl}
+              onChange={handleAvatarChange}
+              onReset={handleAvatarReset}
+              fallbackText={fallbackText}
+              disabled={isLoading || isSaving}
             />
           </CardContent>
         </Card>
@@ -61,43 +188,67 @@ export default function ProfilePage() {
         <div className="grid gap-6">
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="fullname">Full Name</Label>
+              <Label htmlFor="fullname">Nom complet</Label>
               <div className="relative">
                 <HugeiconsIcon icon={UserIcon} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input id="fullname" placeholder="John Doe" className="pl-10" defaultValue="Murgo Dash" />
+                <Input
+                  id="fullname"
+                  placeholder="Nom complet"
+                  className="pl-10"
+                  value={profile.displayName}
+                  onChange={(event) => updateProfile("displayName", event.target.value)}
+                  disabled={isLoading || isSaving}
+                />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Nom d’utilisateur</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
-                <Input id="username" placeholder="johndoe" className="pl-8" defaultValue="murgodash" />
+                <Input
+                  id="username"
+                  placeholder="nom-utilisateur"
+                  className="pl-8"
+                  value={profile.handle}
+                  onChange={(event) => updateProfile("handle", event.target.value)}
+                  disabled={isLoading || isSaving}
+                />
               </div>
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="email">Business Email</Label>
+            <Label htmlFor="email">Adresse e-mail professionnelle</Label>
             <div className="relative">
               <HugeiconsIcon icon={Mail01Icon} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input id="email" type="email" placeholder="john@example.com" className="pl-10" defaultValue="hello@murgodash.com" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@certilys.com"
+                className="pl-10"
+                value={profile.email}
+                onChange={(event) => updateProfile("email", event.target.value)}
+                disabled={isLoading || isSaving}
+              />
             </div>
             <p className="text-xs text-muted-foreground">
-              This email will be used for security notifications.
+              Cette adresse est utilisée pour les notifications et la connexion administrateur.
             </p>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Numéro de téléphone</Label>
             <div className="relative">
-              <PhoneInput 
-                value={phone} 
-                onChange={setPhone} 
-                placeholder="Renseigner votre numéro"
+              <PhoneInput
+                id="phone"
+                value={profile.phoneNumber}
+                onChange={(value) => updateProfile("phoneNumber", value)}
+                placeholder="Renseignez votre numéro"
+                disabled={isLoading || isSaving}
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Add a phone number for 2FA or system notifications.
+              Ajoutez un numéro pour les notifications sensibles ou le support interne.
             </p>
           </div>
 
@@ -107,23 +258,26 @@ export default function ProfilePage() {
               <HugeiconsIcon icon={InformationCircleIcon} className="absolute left-3 top-3 text-muted-foreground" size={18} />
               <Textarea
                 id="bio"
-                placeholder="Tell us about yourself..."
+                placeholder="Présentez brièvement votre rôle dans l’équipe Certilys."
                 className="min-h-32 pl-10 pt-3"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                value={profile.bio}
+                onChange={(event) => updateProfile("bio", event.target.value)}
                 maxLength={250}
+                disabled={isLoading || isSaving}
               />
             </div>
-            <CharacterCounter currentLength={bio.length} maxLength={250} />
+            <CharacterCounter currentLength={profile.bio.length} maxLength={250} />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="website">Website</Label>
-            <AddonInput 
-              id="website" 
-              prefixAddon="https://" 
-              placeholder="murgodash.dev" 
-              defaultValue="murgodash.dev" 
+            <Label htmlFor="website">Site web</Label>
+            <AddonInput
+              id="website"
+              prefixAddon="https://"
+              placeholder="certilys.com"
+              value={profile.website}
+              onChange={(event) => updateProfile("website", event.target.value)}
+              disabled={isLoading || isSaving}
             />
           </div>
         </div>
@@ -131,18 +285,23 @@ export default function ProfilePage() {
         <Separator className="bg-border/50" />
 
         <div className="flex items-center justify-end gap-3">
-          <Button variant="outline">Cancel</Button>
-          <Button 
-            className="min-w-32 gap-2" 
+          <Button variant="outline" onClick={resetForm} disabled={isLoading || isSaving}>
+            Annuler
+          </Button>
+          <Button
+            className="min-w-32 gap-2"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isLoading || isSaving}
           >
             {isSaving ? (
-              <>Saving...</>
+              <>
+                <HugeiconsIcon icon={Loading02Icon} size={18} className="animate-spin" />
+                Enregistrement...
+              </>
             ) : (
               <>
                 <HugeiconsIcon icon={Tick02Icon} size={18} strokeWidth={2} />
-                Save Changes
+                Enregistrer
               </>
             )}
           </Button>

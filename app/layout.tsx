@@ -7,6 +7,7 @@ import { CommandPaletteProvider } from "@/components/providers/command-provider"
 import { SearchDialog } from "@/components/certilys-ui/dashboard/search-dialog";
 import { QuickCreateDialog } from "@/components/certilys-ui/dashboard/quick-create-dialog";
 import { ShortcutsDialog } from "@/components/certilys-ui/dashboard/shortcuts-dialog";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -52,6 +53,7 @@ export default function RootLayout({
                 <SearchDialog />
                 <QuickCreateDialog />
                 <ShortcutsDialog />
+                <Toaster richColors closeButton />
               </TooltipProvider>
             </CommandPaletteProvider>
           </ThemeProvider>
