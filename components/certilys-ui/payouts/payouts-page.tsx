@@ -7,7 +7,6 @@ import {
   Wallet01Icon,
   Coins01Icon,
   CheckmarkCircle02Icon,
-  Cancel01Icon,
   Clock01Icon,
   InboxIcon,
   SearchRemoveIcon,
@@ -45,19 +44,52 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
 import {
+  getAdminPayoutsAction,
+  retryAdminPayoutAction,
   type AdminPayout,
-  type PayoutStatus,
-  mockAdminPayouts,
-  PAYOUT_STATUS_CONFIG,
-  methodLabel,
-  destinationSummary,
-  formatXOF,
-  formatDateTime,
-} from "@/lib/mock/admin-payouts-data";
+  type AdminPayoutDestination,
+  type AdminPayoutStatus,
+} from "@/lib/admin-payouts-actions";
 
-function StatusBadge({ status }: { status: PayoutStatus }) {
+const PAYOUT_STATUS_CONFIG: Record<
+  AdminPayoutStatus,
+  { label: string; colorClass: string; dotClass: string }
+> = {
+  PENDING: {
+    label: "En attente",
+    colorClass: "text-chart-4 border-chart-4/40 bg-chart-4/10",
+    dotClass: "bg-chart-4",
+  },
+  PROCESSING: {
+    label: "En traitement",
+    colorClass: "text-primary border-primary/40 bg-primary/10",
+    dotClass: "bg-primary",
+  },
+  SUCCEEDED: {
+    label: "Réussi",
+    colorClass: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10",
+    dotClass: "bg-emerald-500",
+  },
+  FAILED: {
+    label: "Échoué",
+    colorClass: "text-destructive border-destructive/40 bg-destructive/10",
+    dotClass: "bg-destructive",
+  },
+  CANCELLED: {
+    label: "Annulé",
+    colorClass: "text-muted-foreground border-border bg-muted/50",
+    dotClass: "bg-muted-foreground",
+  },
+};
+
+const KPI_ICONS: Record<string, IconSvgElement> = {
+  pendingCount: Clock01Icon,
+  pendingAmount: Wallet01Icon,
+  paidAmount: Coins01Icon,
+};
+
+function StatusBadge({ status }: { status: AdminPayoutStatus }) {
   const cfg = PAYOUT_STATUS_CONFIG[status];
   return (
     <Badge
@@ -69,12 +101,6 @@ function StatusBadge({ status }: { status: PayoutStatus }) {
     </Badge>
   );
 }
-
-const KPI_ICONS: Record<string, IconSvgElement> = {
-  pendingCount: Clock01Icon,
-  pendingAmount: Wallet01Icon,
-  paidAmount: Coins01Icon,
-};
 
 function KpiCards({
   pendingCount,
@@ -88,14 +114,14 @@ function KpiCards({
   const items = [
     {
       id: "pendingCount",
-      label: "Demandes en attente",
+      label: "Reversements à suivre",
       value: String(pendingCount),
       colorClass: "text-chart-4",
       iconBg: "bg-chart-4/15",
     },
     {
       id: "pendingAmount",
-      label: "Montant à reverser",
+      label: "Montant en cours",
       value: formatXOF(pendingAmount),
       colorClass: "text-primary",
       iconBg: "bg-primary/15",
@@ -108,6 +134,7 @@ function KpiCards({
       iconBg: "bg-emerald-500/15",
     },
   ];
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {items.map((kpi) => (
@@ -156,7 +183,7 @@ function EmptyRow({ type }: { type: "empty" | "no-results" }) {
             />
           </div>
           <p className="text-sm font-medium text-foreground">
-            {isEmpty ? "Aucune demande de reversement" : "Aucun résultat"}
+            {isEmpty ? "Aucun reversement" : "Aucun résultat"}
           </p>
         </div>
       </TableCell>
@@ -194,58 +221,72 @@ export default function PayoutsPage() {
     defaultValue: "",
   });
   const [search, setSearch] = React.useState("");
-
   const [loading, setLoading] = React.useState(true);
-  React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
-  }, []);
-
-  const [data, setData] = React.useState<AdminPayout[]>(mockAdminPayouts);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [data, setData] = React.useState<AdminPayout[]>([]);
   const [pending, setPending] = React.useState<string | null>(null);
 
-  const pendingCount = data.filter((p) => p.status === "PENDING").length;
+  const refreshPayouts = React.useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      setData(await getAdminPayoutsAction());
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger les reversements.",
+      );
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refreshPayouts();
+  }, [refreshPayouts]);
+
+  const pendingStatuses: AdminPayoutStatus[] = ["PENDING", "PROCESSING"];
+  const pendingCount = data.filter((p) => pendingStatuses.includes(p.status)).length;
   const pendingAmount = data
-    .filter((p) => p.status === "PENDING")
+    .filter((p) => pendingStatuses.includes(p.status))
     .reduce((sum, p) => sum + p.amount, 0);
   const paidAmount = data
-    .filter((p) => p.status === "PAID")
+    .filter((p) => p.status === "SUCCEEDED")
     .reduce((sum, p) => sum + p.amount, 0);
 
   const filtered = data.filter((p) => {
     const q = search.toLowerCase().trim();
-    if (q && !p.instructorName.toLowerCase().includes(q)) return false;
+    if (
+      q &&
+      !p.instructorName.toLowerCase().includes(q) &&
+      !destinationSummary(p.destination).toLowerCase().includes(q)
+    ) {
+      return false;
+    }
     if (statusParam && p.status !== statusParam) return false;
     return true;
   });
 
-  async function resolve(
-    id: string,
-    next: "PAID" | "REJECTED",
-    name: string,
-    amount: number,
-  ) {
+  async function retry(id: string, name: string) {
     setPending(id);
-    // Simulation : la vraie action = POST /admin/payouts/:id/approve|reject (voir PAYOUTS-API-SPEC.md).
-    await new Promise((r) => setTimeout(r, 700));
-    setData((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, status: next, processedAt: new Date().toISOString() }
-          : p,
-      ),
-    );
-    setPending(null);
-    if (next === "PAID") {
-      toast.success(`Reversement validé — ${name} · ${formatXOF(amount)}`);
-    } else {
-      toast.info(`Demande rejetée — ${name}`);
+    try {
+      const updated = await retryAdminPayoutAction(id);
+      setData((prev) =>
+        prev.map((payout) => (payout.id === id ? updated : payout)),
+      );
+      toast.success(`Reversement relancé pour ${name}.`);
+      await refreshPayouts();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Impossible de relancer ce reversement.",
+      );
+    } finally {
+      setPending(null);
     }
-    console.log("[AUDIT] PAYOUT_RESOLVED", {
-      id,
-      status: next,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   const hasData = data.length > 0;
@@ -253,13 +294,13 @@ export default function PayoutsPage() {
 
   return (
     <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
-      {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground font-sora">
           Reversements
         </h1>
         <p className="text-sm text-muted-foreground max-w-xl">
-          Validez les demandes de retrait des formateurs (Mobile Money).
+          Suivez les reversements formateurs, les traitements Moneroo et les
+          relances administratives.
         </p>
       </div>
 
@@ -269,10 +310,9 @@ export default function PayoutsPage() {
         paidAmount={paidAmount}
       />
 
-      {/* Recherche + filtre */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
-          placeholder="Rechercher un formateur…"
+          placeholder="Rechercher un formateur..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:max-w-sm"
@@ -281,19 +321,26 @@ export default function PayoutsPage() {
           value={statusParam || "all"}
           onValueChange={(v) => setStatusParam(v === "all" ? null : v)}
         >
-          <SelectTrigger size="sm" className="w-[170px]">
+          <SelectTrigger size="sm" className="w-[190px]">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
             <SelectItem value="PENDING">En attente</SelectItem>
-            <SelectItem value="PAID">Payé</SelectItem>
-            <SelectItem value="REJECTED">Rejeté</SelectItem>
+            <SelectItem value="PROCESSING">En traitement</SelectItem>
+            <SelectItem value="SUCCEEDED">Réussi</SelectItem>
+            <SelectItem value="FAILED">Échoué</SelectItem>
+            <SelectItem value="CANCELLED">Annulé</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Table */}
+      {loadError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+          {loadError}
+        </div>
+      ) : null}
+
       <Card className="border-border/60 shadow-none overflow-hidden p-0">
         <div className="overflow-x-auto">
           <Table className="min-w-[760px]">
@@ -301,7 +348,7 @@ export default function PayoutsPage() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Formateur</TableHead>
                 <TableHead>Méthode</TableHead>
-                <TableHead>Demandé le</TableHead>
+                <TableHead>Déclenché le</TableHead>
                 <TableHead className="text-right">Montant</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Action</TableHead>
@@ -332,107 +379,74 @@ export default function PayoutsPage() {
                       {formatDateTime(p.requestedAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
-                      {formatXOF(p.amount)}
+                      {formatXOF(p.amount, p.currency)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={p.status} />
+                      {p.status === "FAILED" && p.failureReason ? (
+                        <p className="mt-1 max-w-[220px] truncate text-xs text-destructive">
+                          {p.failureReason}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-right">
-                      {p.status === "PENDING" ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <AlertDialog>
-                            <AlertDialogTriggerButton
+                      {p.status === "FAILED" ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
                               disabled={pending === p.id}
-                            />
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Valider le reversement ?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Confirmez le versement de{" "}
-                                  {formatXOF(p.amount)} à {p.instructorName}.
-                                  Vérifiez les coordonnées ci-dessous : cette
-                                  action déclenche le décaissement.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-
-                              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+                              className="h-8 gap-1.5 text-xs"
+                            >
+                              <HugeiconsIcon
+                                icon={CheckmarkCircle02Icon}
+                                className="size-3.5"
+                                size={14}
+                                strokeWidth={1.5}
+                              />
+                              Relancer
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Relancer le reversement ?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Une nouvelle tentative Moneroo sera lancée pour{" "}
+                                {p.instructorName} à hauteur de{" "}
+                                {formatXOF(p.amount, p.currency)}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+                              <DetailRow
+                                label="Méthode"
+                                value={methodLabel(p.destination)}
+                              />
+                              <DetailRow
+                                label="Destination"
+                                value={destinationSummary(p.destination)}
+                              />
+                              {p.failureReason ? (
                                 <DetailRow
-                                  label="Méthode"
-                                  value={methodLabel(p.destination)}
+                                  label="Dernière erreur"
+                                  value={p.failureReason}
                                 />
-                                {p.destination.type === "MOBILE_MONEY" ? (
-                                  <>
-                                    <DetailRow
-                                      label="Réseau"
-                                      value={p.destination.network}
-                                    />
-                                    <DetailRow
-                                      label="Numéro"
-                                      value={p.destination.phone}
-                                    />
-                                  </>
-                                ) : (
-                                  <>
-                                    <DetailRow
-                                      label="Titulaire"
-                                      value={p.destination.holder}
-                                    />
-                                    <DetailRow
-                                      label="Banque"
-                                      value={p.destination.bankName}
-                                    />
-                                    <DetailRow
-                                      label="IBAN"
-                                      value={p.destination.iban}
-                                    />
-                                    <DetailRow
-                                      label="BIC / SWIFT"
-                                      value={p.destination.bic}
-                                    />
-                                  </>
-                                )}
-                              </div>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    resolve(
-                                      p.id,
-                                      "PAID",
-                                      p.instructorName,
-                                      p.amount,
-                                    )
-                                  }
-                                >
-                                  Valider le versement
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={pending === p.id}
-                            onClick={() =>
-                              resolve(p.id, "REJECTED", p.instructorName, p.amount)
-                            }
-                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
-                          >
-                            <HugeiconsIcon
-                              icon={Cancel01Icon}
-                              className="size-3.5"
-                              size={14}
-                              strokeWidth={1.5}
-                            />
-                            Rejeter
-                          </Button>
-                        </div>
+                              ) : null}
+                            </div>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => retry(p.id, p.instructorName)}
+                              >
+                                Relancer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       ) : (
                         <span className="text-xs text-muted-foreground">
-                          {p.processedAt ? formatDateTime(p.processedAt) : "—"}
+                          {p.processedAt ? formatDateTime(p.processedAt) : "-"}
                         </span>
                       )}
                     </TableCell>
@@ -443,29 +457,7 @@ export default function PayoutsPage() {
           </Table>
         </div>
       </Card>
-
-      <p className="text-center text-xs text-muted-foreground">
-        Prototype, actions simulées. Le décaissement réel se fera côté backend
-        (voir PAYOUTS-API-SPEC.md).
-      </p>
     </div>
-  );
-}
-
-// Bouton déclencheur "Valider" (séparé pour rester lisible).
-function AlertDialogTriggerButton({ disabled }: { disabled: boolean }) {
-  return (
-    <AlertDialogTrigger asChild>
-      <Button size="sm" disabled={disabled} className="h-8 gap-1.5 text-xs">
-        <HugeiconsIcon
-          icon={CheckmarkCircle02Icon}
-          className="size-3.5"
-          size={14}
-          strokeWidth={1.5}
-        />
-        Valider
-      </Button>
-    </AlertDialogTrigger>
   );
 }
 
@@ -479,3 +471,34 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function methodLabel(destination: AdminPayoutDestination): string {
+  if (destination.type === "BANK_TRANSFER") return "Virement bancaire";
+  if (destination.type === "MOBILE_MONEY") return "Mobile Money";
+  return "Non configuré";
+}
+
+function destinationSummary(destination: AdminPayoutDestination): string {
+  if (destination.type === "MOBILE_MONEY") {
+    return `${destination.network} · ${destination.phone}`;
+  }
+  if (destination.type === "BANK_TRANSFER") {
+    return `${destination.bankName} · ${destination.iban}`;
+  }
+  return destination.label;
+}
+
+function formatXOF(amount: number, currency = "XOF"): string {
+  return `${amount.toLocaleString("fr-FR")} ${currency}`;
+}
+
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
