@@ -6,18 +6,23 @@ import { NavUser } from "../../layout/nav-user";
 import { HeaderNotifications } from "../dashboard/header-notifications";
 import { settingsNavMain } from "../../../lib/settings-nav-config";
 
-const headerUser = {
-  name: "murgo",
-  email: "m@example.com",
-  avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=murgo",
+type SettingsHeaderUser = {
+  displayName?: string | null;
+  email: string;
+  avatarUrl?: string | null;
 };
 
-export function SettingsHeader() {
+export function SettingsHeader({ user }: { user?: SettingsHeaderUser }) {
   const pathname = usePathname();
   
   // Trouver le titre de la section actuelle
   const currentSection = settingsNavMain.find(item => item.url === pathname);
   const title = currentSection?.title || "Settings";
+  const headerUser = {
+    name: user?.displayName?.trim() || user?.email.split("@")[0] || "Admin",
+    email: user?.email ?? "admin@certilys.com",
+    avatar: user?.avatarUrl ?? null,
+  };
 
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">

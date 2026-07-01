@@ -11,9 +11,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface SettingsLayoutProps {
   children: ReactNode;
+  user?: {
+    displayName?: string | null;
+    email: string;
+    avatarUrl?: string | null;
+  };
 }
 
-export function SettingsLayout({ children }: SettingsLayoutProps) {
+export function SettingsLayout({ children, user }: SettingsLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
@@ -29,7 +34,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
       >
         <SettingsSidebar variant="sidebar" />
         <SidebarInset className="min-h-svh rounded-none shadow-none">
-          <SettingsHeader />
+          <SettingsHeader user={user} />
           <main className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
             {children}
           </main>

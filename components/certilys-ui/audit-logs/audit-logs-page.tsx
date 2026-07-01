@@ -125,7 +125,7 @@ const TARGET_TYPE_TRANSLATIONS: Record<string, string> = {
   COURSE: "Formation",
   USER: "Utilisateur",
   ORDER: "Commande",
-  SYSTEM: "Syst?me",
+  SYSTEM: "Système",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,7 +195,7 @@ export default function AuditLogsPage() {
         setLoadError(
           error instanceof Error
             ? error.message
-            : "Impossible de charger les journaux d?audit.",
+            : "Impossible de charger les journaux d’audit.",
         );
         setData([]);
       } finally {
@@ -220,7 +220,7 @@ export default function AuditLogsPage() {
     return Array.from(names).sort();
   }, [data]);
 
-  // Filtrage logique des journaux d?audit
+  // Filtrage logique des journaux d’audit
   const filteredLogs = React.useMemo(() => {
     return data.filter((log) => {
       // 1. Recherche globale
@@ -366,7 +366,7 @@ export default function AuditLogsPage() {
             <SelectValue placeholder="Toutes les périodes" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="today">Aujourd?hui</SelectItem>
+            <SelectItem value="today">Aujourd’hui</SelectItem>
             <SelectItem value="7days">7 derniers jours</SelectItem>
             <SelectItem value="older">Plus anciens</SelectItem>
           </SelectContent>
@@ -434,7 +434,7 @@ export default function AuditLogsPage() {
           </CardContent>
         </Card>
 
-        {/* KPI 2 : Aujourd?hui */}
+        {/* KPI 2 : Aujourd’hui */}
         <Card className="border-border/60 shadow-none">
           <CardContent className="flex items-center gap-3 px-4 py-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -449,7 +449,7 @@ export default function AuditLogsPage() {
               <div className="text-2xl font-bold text-foreground leading-none">
                 {loading ? <Skeleton className="h-6 w-8" /> : kpis.todayCount}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">Aujourd?hui</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Aujourd’hui</p>
             </div>
           </CardContent>
         </Card>
@@ -497,7 +497,7 @@ export default function AuditLogsPage() {
           onFiltersReset={() =>
             setFilterValues({ action: "", admin: "", targetType: "", period: "", severity: "" })
           }
-          sheetTitle="Filtrer les journaux d?audit"
+          sheetTitle="Filtrer les journaux d’audit"
           className="w-full max-w-sm"
         />
         {activeFilterCount > 0 && (
@@ -564,9 +564,9 @@ export default function AuditLogsPage() {
                       className="size-8 text-muted-foreground/50"
                       size={32}
                     />
-                    <p className="text-sm font-medium">Aucun journal d?audit trouvé</p>
+                    <p className="text-sm font-medium">Aucun journal d’audit trouvé</p>
                     <p className="text-xs text-muted-foreground/80">
-                      Essayez d?ajuster ou de réinitialiser vos filtres.
+                      Essayez d’ajuster ou de réinitialiser vos filtres.
                     </p>
                   </div>
                 </TableCell>
@@ -662,7 +662,7 @@ export default function AuditLogsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         size="lg"
-        title="Détail du journal d?audit"
+        title="Détail du journal d’audit"
         description={selectedLog ? `ID: ${selectedLog.id}` : undefined}
         footer={
           <div className="flex sm:justify-end">
@@ -751,7 +751,7 @@ export default function AuditLogsPage() {
 
               <hr className="border-border/60" />
 
-              {/* Ligne 3: Cible de l?action */}
+              {/* Ligne 3: Cible de l’action */}
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Cible de la décision
@@ -790,10 +790,10 @@ export default function AuditLogsPage() {
               {selectedLog.reason && (
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Justificatif de l?action
+                    Justificatif de l’action
                   </label>
                   <p className="mt-1 p-3 rounded-lg border border-border/60 bg-muted/40 text-xs italic leading-relaxed text-foreground select-text">
-                    ? {selectedLog.reason} ?
+                    « {selectedLog.reason} »
                   </p>
                 </div>
               )}
