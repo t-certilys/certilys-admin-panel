@@ -94,8 +94,8 @@ export const mockTeamMembers: TeamMember[] = [
 
 export const getTeamKpis = (members: TeamMember[]): TeamKpis => {
   return {
-    adminsCount: members.filter((m) => m.role === "ADMIN" && m.status !== "SUSPENDED").length,
-    moderatorsCount: members.filter((m) => m.role === "MODERATOR" && m.status !== "SUSPENDED").length,
+    adminsCount: members.filter((m) => m.role === "ADMIN" && m.status === "ACTIVE").length,
+    moderatorsCount: members.filter((m) => m.role === "MODERATOR" && m.status === "ACTIVE").length,
     pendingInvitations: members.filter((m) => m.status === "INVITED").length,
     suspendedCount: members.filter((m) => m.status === "SUSPENDED").length,
   };

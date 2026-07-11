@@ -1,6 +1,6 @@
 "use server";
 
-import { adminGet, adminMutation } from "@/lib/admin-api";
+import { AdminApiError, adminGet, adminMutation } from "@/lib/admin-api";
 
 export type InvitationActionResponse = {
   success: boolean;
@@ -24,6 +24,14 @@ export async function getInvitationDetails(
       InvitationActionResponse & { data?: InvitationDetails }
     >(`/admin/invitations/resolve?token=${encodeURIComponent(tokenOrId)}`);
   } catch (error) {
+    if (error instanceof AdminApiError) {
+      return {
+        success: false,
+        status: invitationStatusFromErrorCode(error.code),
+        message: error.message,
+      };
+    }
+
     return {
       success: false,
       status: "INVALID",
@@ -44,6 +52,14 @@ export async function acceptInvitation(
       { token: tokenOrId },
     );
   } catch (error) {
+    if (error instanceof AdminApiError) {
+      return {
+        success: false,
+        status: invitationStatusFromErrorCode(error.code),
+        message: error.message,
+      };
+    }
+
     return {
       success: false,
       message:
@@ -63,6 +79,14 @@ export async function rejectInvitation(
       { token: tokenOrId },
     );
   } catch (error) {
+    if (error instanceof AdminApiError) {
+      return {
+        success: false,
+        status: invitationStatusFromErrorCode(error.code),
+        message: error.message,
+      };
+    }
+
     return {
       success: false,
       message:
@@ -71,4 +95,20 @@ export async function rejectInvitation(
           : "Action impossible : invitation non valide.",
     };
   }
+}
+
+function invitationStatusFromErrorCode(
+  code?: string,
+): NonNullable<InvitationActionResponse["status"]> {
+  if (code === "ADMIN_INVITATION_ALREADY_ACCEPTED") {
+    return "ALREADY_ACCEPTED";
+  }
+  if (code === "ADMIN_INVITATION_EXPIRED") {
+    return "EXPIRED";
+  }
+  if (code === "ADMIN_INVITATION_REJECTED") {
+    return "REJECTED";
+  }
+
+  return "INVALID";
 }

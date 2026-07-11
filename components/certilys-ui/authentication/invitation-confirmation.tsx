@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,15 +19,75 @@ import {
 } from "@/lib/invitation-actions";
 import { toast } from "sonner";
 
-export default function InvitationConfirmation() {
+type InvitationConfirmationProps = {
+  token: string;
+};
+
+type InvitationUiStatus =
+  | "VALID"
+  | "EXPIRED"
+  | "ALREADY_ACCEPTED"
+  | "REJECTED"
+  | "INVALID";
+
+const STATUS_COPY: Record<
+  InvitationUiStatus,
+  { title: string; description: string; actionLabel: string }
+> = {
+  VALID: {
+    title: "Invitation valide",
+    description: "",
+    actionLabel: "Continuer",
+  },
+  EXPIRED: {
+    title: "Invitation expirée",
+    description:
+      "Ce lien n'est plus utilisable. Demandez à un administrateur de renvoyer une nouvelle invitation depuis le panel.",
+    actionLabel: "Retour à la connexion",
+  },
+  ALREADY_ACCEPTED: {
+    title: "Invitation déjà acceptée",
+    description:
+      "Ce lien a déjà activé le compte administrateur associé. Vous pouvez vous connecter avec cette adresse e-mail.",
+    actionLabel: "Se connecter",
+  },
+  REJECTED: {
+    title: "Invitation déclinée",
+    description:
+      "Cette invitation a été refusée et ne peut plus être utilisée.",
+    actionLabel: "Retour à la connexion",
+  },
+  INVALID: {
+    title: "Invitation invalide",
+    description:
+      "Ce lien d'invitation est invalide, incomplet ou a été supprimé.",
+    actionLabel: "Retour à la connexion",
+  },
+};
+
+function toUiStatus(status?: string): InvitationUiStatus {
+  if (
+    status === "EXPIRED" ||
+    status === "ALREADY_ACCEPTED" ||
+    status === "REJECTED" ||
+    status === "INVALID"
+  ) {
+    return status;
+  }
+
+  return "INVALID";
+}
+
+export default function InvitationConfirmation({
+  token,
+}: InvitationConfirmationProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
 
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<InvitationUiStatus>("VALID");
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
 
   useEffect(() => {
@@ -44,18 +104,21 @@ export default function InvitationConfirmation() {
     try {
       setLoading(true);
       setError(null);
+      setStatus("VALID");
 
       const response = await getInvitationDetails(tokenOrId);
 
       if (response.success && response.data) {
         setInvitation(response.data);
       } else {
+        setStatus(toUiStatus(response.status));
         setError(
           response.message ||
-            "Impossible de récupérer les détails de l'invitation.",
+            STATUS_COPY[toUiStatus(response.status)].description,
         );
       }
     } catch {
+      setStatus("INVALID");
       setError("Erreur de communication avec le serveur.");
     } finally {
       setLoading(false);
@@ -72,6 +135,8 @@ export default function InvitationConfirmation() {
         toast.success(response.message);
         router.push("/auth/login");
       } else {
+        setStatus(toUiStatus(response.status));
+        setError(response.message);
         toast.error(response.message);
       }
     } catch {
@@ -91,6 +156,8 @@ export default function InvitationConfirmation() {
         toast.success(response.message);
         router.push("/auth/login");
       } else {
+        setStatus(toUiStatus(response.status));
+        setError(response.message);
         toast.error(response.message);
       }
     } catch {
@@ -124,6 +191,8 @@ export default function InvitationConfirmation() {
   }
 
   if (error) {
+    const copy = STATUS_COPY[status];
+
     return (
       <div className="min-h-screen flex">
         <div className="hidden lg:flex lg:w-1/2 auth-pattern items-center justify-center p-12 relative overflow-hidden">
@@ -146,17 +215,17 @@ export default function InvitationConfirmation() {
             />
 
             <h1 className="text-2xl font-bold font-sora">
-              Invitation invalide
+              {copy.title}
             </h1>
 
-            <p className="text-gray-400 text-sm">{error}</p>
+            <p className="text-gray-400 text-sm">{error || copy.description}</p>
 
             <div className="max-w-xs mx-auto">
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-sm font-semibold"
                 onClick={() => router.push("/auth/login")}
               >
-                Retour à la connexion
+                {copy.actionLabel}
               </Button>
             </div>
           </div>
