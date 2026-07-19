@@ -50,6 +50,13 @@ export async function adminPatch<T>(
   return adminJsonMutation<T>("PATCH", path, body);
 }
 
+export async function adminDelete<T>(
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
+  return adminJsonMutation<T>("DELETE", path, body);
+}
+
 async function adminJsonMutation<T>(
   method: "POST" | "PATCH" | "DELETE",
   path: string,

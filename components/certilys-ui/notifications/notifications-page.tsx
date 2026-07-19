@@ -13,6 +13,7 @@ import {
   SearchRemoveIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,85 +27,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  deleteAdminNotificationAction,
+  markAdminNotificationAsReadAction,
+  markAllAdminNotificationsAsReadAction,
+  type AdminNotificationItem,
+} from "@/lib/admin-notifications-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Structure d'une notification et données Certilys
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  category: "formation" | "paiement" | "systeme" | "utilisateur";
-  severity: "info" | "warning" | "critical";
-  createdAt: string;
-  isRead: boolean;
-}
-
-// Les dates sont pré-formatées pour être identiques SSR / client (pas de toLocaleDateString au rendu)
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    title: "Nouvelle inscription formateur",
-    description: "Jean Dupont a postulé en tant que formateur expert en cybersécurité.",
-    category: "utilisateur",
-    severity: "info",
-    createdAt: "29/05/2026, 09:30",
-    isRead: false,
-  },
-  {
-    id: "notif-2",
-    title: "Échec de paiement critique",
-    description: "La transaction pour la commande CMD-2026-9501 a échoué après 3 tentatives.",
-    category: "paiement",
-    severity: "critical",
-    createdAt: "29/05/2026, 08:15",
-    isRead: false,
-  },
-  {
-    id: "notif-3",
-    title: "Paiement validé",
-    description: "La commande CMD-2026-9482 d'un montant de 1 490,00 € a été payée avec succès.",
-    category: "paiement",
-    severity: "info",
-    createdAt: "29/05/2026, 07:45",
-    isRead: false,
-  },
-  {
-    id: "notif-4",
-    title: "Demande de validation de formation",
-    description: "Le formateur Thomas Dubois a soumis le cours 'Cybersécurité Avancée' pour validation.",
-    category: "formation",
-    severity: "warning",
-    createdAt: "29/05/2026, 05:30",
-    isRead: false,
-  },
-  {
-    id: "notif-5",
-    title: "Mise à jour du système planifiée",
-    description: "Une maintenance de la base de données aura lieu ce soir entre 02:00 et 04:00 UTC.",
-    category: "systeme",
-    severity: "info",
-    createdAt: "28/05/2026, 18:00",
-    isRead: true,
-  },
-  {
-    id: "notif-6",
-    title: "Rapport d'audit de sécurité généré",
-    description: "Le journal des audits de la semaine dernière a été compilé et est prêt pour analyse.",
-    category: "systeme",
-    severity: "info",
-    createdAt: "27/05/2026, 14:20",
-    isRead: true,
-  },
-];
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Page Notifications
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function NotificationsPage() {
-  const [notifications, setNotifications] = React.useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+export default function NotificationsPage({
+  initialNotifications,
+}: {
+  initialNotifications: AdminNotificationItem[];
+}) {
+  const [notifications, setNotifications] = React.useState(initialNotifications);
   const [searchValue, setSearchValue] = React.useState("");
   const [filterValues, setFilterValues] = React.useState<Record<string, string>>({
     category: "",
@@ -112,13 +55,8 @@ export default function NotificationsPage() {
     status: "",
   });
 
-  const [loading, setLoading] = React.useState(true);
+  const [loading] = React.useState(false);
   const [actionPending, setActionPending] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(t);
-  }, []);
 
   // Calcul des KPIs compacts
   const kpis = React.useMemo(() => {
@@ -148,28 +86,52 @@ export default function NotificationsPage() {
   // Actions
   async function handleMarkAsRead(id: string) {
     setActionPending(id);
-    await new Promise((r) => setTimeout(r, 300));
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-    console.log("[ENDPOINT API MOCK] PATCH /admin/notifications/:id/read SUCCESS", id);
-    setActionPending(null);
+    try {
+      await markAdminNotificationAsReadAction(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Impossible de marquer cette notification comme lue.",
+      );
+    } finally {
+      setActionPending(null);
+    }
   }
 
   async function handleMarkAllAsRead() {
     setActionPending("all-read");
-    await new Promise((r) => setTimeout(r, 500));
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    console.log("[ENDPOINT API MOCK] PATCH /admin/notifications/read-all SUCCESS");
-    setActionPending(null);
+    try {
+      await markAllAdminNotificationsAsReadAction();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Impossible de marquer les notifications comme lues.",
+      );
+    } finally {
+      setActionPending(null);
+    }
   }
 
   async function handleDelete(id: string) {
     setActionPending(`delete-${id}`);
-    await new Promise((r) => setTimeout(r, 300));
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    console.log("[ENDPOINT API MOCK] DELETE /admin/notifications/:id SUCCESS", id);
-    setActionPending(null);
+    try {
+      await deleteAdminNotificationAction(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Impossible de supprimer cette notification.",
+      );
+    } finally {
+      setActionPending(null);
+    }
   }
 
   // Configuration des filtres légers pour SearchFilter
