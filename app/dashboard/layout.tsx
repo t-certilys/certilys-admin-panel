@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminSessionAction } from "@/lib/auth-actions";
+import { getAdminNotificationsAction } from "@/lib/admin-notifications-actions";
+import { withNotificationUnreadCount } from "@/lib/dashboard-nav-config";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
@@ -30,5 +32,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
     redirect("/auth/2fa");
   }
 
-  return <DashboardLayout user={session}>{children}</DashboardLayout>;
+  const { kpis } = await getAdminNotificationsAction();
+  const navConfig = withNotificationUnreadCount(kpis.unread);
+
+  return (
+    <DashboardLayout user={session} navConfig={navConfig}>
+      {children}
+    </DashboardLayout>
+  );
 }

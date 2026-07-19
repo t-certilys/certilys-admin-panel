@@ -87,7 +87,6 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         shortTitle: "Notifs",
         url: "/dashboard/notifications",
         icon: Notification01Icon,
-        badge: 3, // Badge dynamique mocké de notifications non-lues
       },
       {
         title: "Logs / Audit",
@@ -110,3 +109,14 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
     ],
   },
 ];
+
+export function withNotificationUnreadCount(unreadCount: number) {
+  return dashboardNavConfig.map((group) => ({
+    ...group,
+    items: group.items.map((item) =>
+      item.url === "/dashboard/notifications"
+        ? { ...item, badge: unreadCount > 0 ? unreadCount : undefined }
+        : item,
+    ),
+  }));
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Notification01Icon,
   CheckmarkCircle02Icon,
@@ -47,6 +48,7 @@ export default function NotificationsPage({
 }: {
   initialNotifications: AdminNotificationItem[];
 }) {
+  const router = useRouter();
   const [notifications, setNotifications] = React.useState(initialNotifications);
   const [searchValue, setSearchValue] = React.useState("");
   const [filterValues, setFilterValues] = React.useState<Record<string, string>>({
@@ -91,6 +93,7 @@ export default function NotificationsPage({
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -107,6 +110,7 @@ export default function NotificationsPage({
     try {
       await markAllAdminNotificationsAsReadAction();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -123,6 +127,7 @@ export default function NotificationsPage({
     try {
       await deleteAdminNotificationAction(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -456,22 +461,6 @@ export default function NotificationsPage({
           })}
       </div>
 
-      {/* ── 5. Pied de page: Intégration backend ────────────────────────────── */}
-      <Card className="border border-border/40 bg-muted/10 mt-2">
-        <CardContent className="p-4 flex gap-3 items-start">
-          <HugeiconsIcon icon={AlertCircleIcon} className="text-muted-foreground shrink-0 mt-0.5 size-4" size={16} strokeWidth={1.5} />
-          <div className="grid gap-0.5">
-            <span className="text-xs font-semibold text-foreground">Préparation de l&apos;intégration backend</span>
-            <p className="text-[11px] text-muted-foreground leading-normal">
-              Cette interface de supervision opérationnelle est prête pour l&apos;intégration finale de l&apos;API de notifications.
-              Les endpoints prévus sont : 
-              <code className="mx-1 bg-muted px-1 py-0.5 rounded text-[10px] text-primary">GET /admin/notifications</code>, 
-              <code className="mx-1 bg-muted px-1 py-0.5 rounded text-[10px] text-primary">PATCH /admin/notifications/:id/read</code>, et 
-              <code className="mx-1 bg-muted px-1 py-0.5 rounded text-[10px] text-primary">PATCH /admin/notifications/read-all</code>.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
