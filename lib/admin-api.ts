@@ -62,27 +62,47 @@ async function adminJsonMutation<T>(
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T> {
-  const csrf = await getCsrf();
-  const cookieHeader = mergeCookieHeader(
-    await currentCookieHeader(),
-    csrf.setCookieHeaders,
-  );
-  const response = await fetch(`${BACKEND_URL}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrf.token,
-      Cookie: cookieHeader,
-    },
-    body: body ? JSON.stringify(body) : "{}",
-    cache: "no-store",
-  });
-  await storeResponseCookies(response);
-  return parseResponse<T>(response);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const csrf = await getCsrf(attempt > 0);
+    const cookieHeader = mergeCookieHeader(
+      await currentCookieHeader(),
+      csrf.setCookieHeaders,
+    );
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrf.token,
+        Cookie: cookieHeader,
+      },
+      body: body ? JSON.stringify(body) : "{}",
+      cache: "no-store",
+    });
+    await storeResponseCookies(response);
+
+    try {
+      return await parseResponse<T>(response);
+    } catch (error) {
+      if (
+        attempt === 0 &&
+        error instanceof AdminApiError &&
+        error.status === 403 &&
+        error.code === "CSRF_INVALID"
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new AdminApiError("Token CSRF absent ou invalide.", 403, "CSRF_INVALID");
 }
 
-async function getCsrf() {
-  const response = await fetch(`${BACKEND_URL}/auth/csrf`, {
+async function getCsrf(forceRefresh = false) {
+  const endpoint = forceRefresh
+    ? "/auth/csrf?scope=admin&refresh=true"
+    : "/auth/csrf?scope=admin";
+  const response = await fetch(`${BACKEND_URL}${endpoint}`, {
     method: "GET",
     headers: {
       Cookie: await currentCookieHeader(),

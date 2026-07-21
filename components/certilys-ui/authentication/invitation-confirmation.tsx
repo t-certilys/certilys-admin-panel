@@ -133,7 +133,7 @@ export default function InvitationConfirmation({
 
       if (response.success) {
         toast.success(response.message);
-        router.push("/auth/login");
+        window.location.replace("/auth/login");
       } else {
         setStatus(toUiStatus(response.status));
         setError(response.message);
@@ -154,7 +154,7 @@ export default function InvitationConfirmation({
 
       if (response.success) {
         toast.success(response.message);
-        router.push("/auth/login");
+        window.location.replace("/auth/login");
       } else {
         setStatus(toUiStatus(response.status));
         setError(response.message);
