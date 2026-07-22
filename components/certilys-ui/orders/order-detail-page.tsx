@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import {
   ArrowLeft01Icon,
   Alert01Icon,
@@ -28,7 +27,6 @@ import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 
 import {
   type AdminOrder,
-  mockOrders,
   orderStatusConfig,
   paymentStatusConfig,
   accessStatusConfig,
@@ -150,22 +148,14 @@ async function simulateApiCall(
 // Page de Détail
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function OrderDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+type OrderDetailPageProps = {
+  initialOrder: AdminOrder | null;
+};
 
-  // Récupération simulée
-  const [order, setOrder] = React.useState<AdminOrder | null>(null);
-  const [loadError, setLoadError] = React.useState(false);
-
-  React.useEffect(() => {
-    const found = mockOrders.find((o) => o.id === id);
-    if (found) {
-      setOrder(found);
-    } else {
-      setLoadError(true);
-    }
-  }, [id]);
+export default function OrderDetailPage({
+  initialOrder,
+}: OrderDetailPageProps) {
+  const [order, setOrder] = React.useState<AdminOrder | null>(initialOrder);
 
   // Dialog d'action
   const [dialog, setDialog] = React.useState<ActionDialogState>({
@@ -288,7 +278,7 @@ export default function OrderDetailPage() {
   }
 
   // Erreur de chargement
-  if (loadError) {
+  if (!order) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 px-4">
         <div className="flex size-14 items-center justify-center rounded-full bg-destructive/10">
@@ -318,20 +308,6 @@ export default function OrderDetailPage() {
             Retour à la liste
           </Link>
         </Button>
-      </div>
-    );
-  }
-
-  if (!order) {
-    return (
-      <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
-        <div className="flex items-center gap-4">
-          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-          <div className="h-6 w-64 rounded bg-muted animate-pulse" />
-        </div>
-        <div className="h-32 rounded-xl bg-muted animate-pulse" />
-        <div className="h-64 rounded-xl bg-muted animate-pulse" />
-        <div className="h-96 rounded-xl bg-muted animate-pulse" />
       </div>
     );
   }
@@ -422,7 +398,7 @@ export default function OrderDetailPage() {
                 size={16}
                 strokeWidth={1.5}
               />
-              Révoquer l'accès
+              Révoquer l&apos;accès
             </Button>
           )}
 
@@ -458,10 +434,10 @@ export default function OrderDetailPage() {
           />
           <div className="space-y-1">
             <strong className="font-semibold block text-amber-700">
-              Anomalie d'inscription détectée
+              Anomalie d&apos;inscription détectée
             </strong>
             <span className="text-muted-foreground text-xs block">
-              Le paiement est complété, mais aucun accès actif n'a été créé pour cet apprenant.
+              Le paiement est complété, mais aucun accès actif n&apos;a été créé pour cet apprenant.
               Veuillez cliquer sur <strong>Synchroniser paiement</strong> ci-dessus pour provisionner son enrôlement.
             </span>
           </div>
@@ -478,11 +454,11 @@ export default function OrderDetailPage() {
           />
           <div className="space-y-1">
             <strong className="font-semibold block text-red-600">
-              Violation de règle de sécurité d'accès !
+              Violation de règle de sécurité d&apos;accès !
             </strong>
             <span className="text-muted-foreground text-xs block">
               Cette commande possède un statut de paiement <strong>{order.paymentStatus}</strong> mais a un accès marqué comme actif.
-              Veuillez immédiatement révoquer l'accès pédagogique de l'apprenant.
+              Veuillez immédiatement révoquer l&apos;accès pédagogique de l&apos;apprenant.
             </span>
           </div>
         </div>
@@ -627,7 +603,7 @@ export default function OrderDetailPage() {
               <span className="text-foreground">{order.formation.instructorName}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground font-medium block">Prix d'origine</span>
+              <span className="text-xs text-muted-foreground font-medium block">Prix d&apos;origine</span>
               <span className="text-foreground tabular-nums flex items-center gap-1">
                 <HugeiconsIcon icon={Tag01Icon} className="size-3 text-muted-foreground" size={12} strokeWidth={1.5} />
                 {formatXOF(order.formation.priceXOF)}
@@ -686,12 +662,12 @@ export default function OrderDetailPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
               <HugeiconsIcon icon={LockKeyIcon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-              6. Statut d'accès & progression
+              6. Statut d&apos;accès & progression
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex items-center justify-between border-b pb-3">
-              <span className="text-muted-foreground">Statut d'accès</span>
+              <span className="text-muted-foreground">Statut d&apos;accès</span>
               <Badge
                 variant="outline"
                 className={`gap-1.5 px-2 py-0.5 text-xs font-semibold ${accCfg.colorClass}`}
@@ -832,7 +808,7 @@ export default function OrderDetailPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
             <HugeiconsIcon icon={Clock01Icon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-            8. Chronologie des événements de commande & d'audit
+            8. Chronologie des événements de commande & d&apos;audit
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2 pb-6">

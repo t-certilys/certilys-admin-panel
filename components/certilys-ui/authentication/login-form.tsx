@@ -17,8 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { EmailInput } from "@/components/ui/email-input";
-import { startAuthAction, googleCallbackAction } from "@/lib/auth-actions";
-import { GoogleIcon } from "@/components/icons/google";
+import { startAuthAction } from "@/lib/auth-actions";
 
 const loginSchema = z.object({
   email: z.string().email({
@@ -31,7 +30,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export const LoginForm = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
@@ -57,40 +55,10 @@ export const LoginForm = () => {
       } else {
         setErrorMessage(response.message);
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Une erreur réseau est survenue. Veuillez réessayer.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleGoogleLogin(simulationToken: string) {
-    setGoogleLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const response = await googleCallbackAction(simulationToken);
-
-      if (response.success) {
-        if (response.status === "REQUIRES_2FA_SETUP") {
-          router.push("/auth/2fa/setup");
-        } else if (response.status === "REQUIRES_2FA") {
-          router.push(`/auth/2fa?challengeId=${response.challengeId}`);
-        } else {
-          const target = response.redirectTo || "/dashboard";
-          if (target.startsWith("http")) {
-            window.location.assign(target);
-          } else {
-            router.push(target);
-          }
-        }
-      } else {
-        setErrorMessage(response.message);
-      }
-    } catch (err) {
-      setErrorMessage("Échec de la connexion avec Google.");
-    } finally {
-      setGoogleLoading(false);
     }
   }
 
@@ -114,7 +82,7 @@ export const LoginForm = () => {
                   <EmailInput
                     placeholder="Entrez votre email admin"
                     {...field}
-                    disabled={loading || googleLoading}
+                    disabled={loading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -125,7 +93,7 @@ export const LoginForm = () => {
           <Button
             className="w-full text-sm font-semibold"
             size="lg"
-            disabled={loading || googleLoading}
+            disabled={loading}
             type="submit"
           >
             <HugeiconsIcon
@@ -139,24 +107,6 @@ export const LoginForm = () => {
         </form>
       </Form>
 
-      <div className="relative flex items-center py-2 text-xs text-muted-foreground">
-        <div className="flex-grow border-t border-border/80" />
-        <span className="mx-4 flex-shrink uppercase text-muted-foreground">
-          ou
-        </span>
-        <div className="flex-grow border-t border-border/80" />
-      </div>
-
-      <Button
-        variant="outline"
-        className="w-full border-border bg-background text-sm font-semibold text-foreground hover:bg-muted hover:text-foreground"
-        size="lg"
-        onClick={() => handleGoogleLogin("google_active")}
-        disabled={loading || googleLoading}
-      >
-        <GoogleIcon className="mr-2 h-4 w-4" />
-        {googleLoading ? "Connexion Google..." : "Continuer avec Google"}
-      </Button>
     </div>
   );
 };
