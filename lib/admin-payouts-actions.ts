@@ -32,14 +32,81 @@ export type AdminPayout = {
   status: AdminPayoutStatus;
   processedAt?: string | null;
   failureReason?: string | null;
+  provider: string;
+  providerPayoutId?: string | null;
+  providerStatus?: string | null;
+  runPeriod?: string | null;
+  retryable: boolean;
+  requiresReconciliation: boolean;
+  lastSyncedAt?: string | null;
+  reconciliationAttempts: number;
+  statusReason?: string | null;
+};
+
+export type AdminPayoutRunStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "PARTIAL"
+  | "SUCCEEDED"
+  | "FAILED";
+
+export type AdminPayoutRun = {
+  runId: string;
+  period: string;
+  status: AdminPayoutRunStatus;
+  scanned: number;
+  eligible: number;
+  created: number;
+  processing: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+  totalSubmittedAmount: number;
+  totalSucceededAmount: number;
+  currency: string;
+  startedAt?: string | null;
+  heartbeatAt?: string | null;
+  completedAt?: string | null;
+};
+
+export type AdminPayoutRunItem = {
+  id: string;
+  instructorId: string;
+  instructorName: string;
+  instructorHandle: string;
+  instructorEmail: string;
+  payoutId?: string | null;
+  providerPayoutId?: string | null;
+  requiresReconciliation: boolean;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "SKIPPED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+  reason?: string | null;
+  error?: string | null;
+  attempts: number;
+};
+
+export type PayoutFailureChallenge = {
+  challengeId: string;
+  confirmationPhrase: string;
+  expiresAt: string;
 };
 
 type BackendPayout = {
   id: string;
+  provider: string;
   triggerType: AdminPayout["triggerType"];
   status: AdminPayoutStatus;
   totalAmount: number;
   currency: string;
+  providerPayoutId?: string | null;
+  providerStatus?: string | null;
+  runPeriod?: string | null;
+  retryable?: boolean;
+  requiresReconciliation?: boolean;
+  lastSyncedAt?: string | null;
+  reconciliationAttempts?: number;
+  statusReason?: string | null;
   failureReason?: string | null;
   initiatedAt?: string | null;
   completedAt?: string | null;
@@ -58,12 +125,11 @@ type BackendPayout = {
   } | null;
 };
 
-type BackendPayoutsResponse = {
-  payouts: BackendPayout[];
-};
-
-type BackendPayoutResponse = {
-  payout: BackendPayout;
+type BackendPayoutsResponse = { payouts: BackendPayout[] };
+type BackendPayoutResponse = { payout: BackendPayout };
+type BackendRunsResponse = { runs: AdminPayoutRun[] };
+type BackendRunResponse = {
+  run: AdminPayoutRun & { items: AdminPayoutRunItem[] };
 };
 
 export async function getAdminPayoutsAction(): Promise<AdminPayout[]> {
@@ -71,25 +137,77 @@ export async function getAdminPayoutsAction(): Promise<AdminPayout[]> {
   return response.payouts.map(mapPayout);
 }
 
-export async function retryAdminPayoutAction(
+export async function retryAdminPayoutAction(payoutId: string) {
+  return mutatePayout(`/admin/payouts/${encodeURIComponent(payoutId)}/retry`);
+}
+
+export async function syncAdminPayoutAction(payoutId: string) {
+  return mutatePayout(`/admin/payouts/${encodeURIComponent(payoutId)}/sync`);
+}
+
+export async function attachProviderPayoutIdAction(
   payoutId: string,
-): Promise<AdminPayout> {
-  const response = await adminMutation<BackendPayoutResponse>(
-    `/admin/payouts/${encodeURIComponent(payoutId)}/retry`,
+  providerPayoutId: string,
+) {
+  return mutatePayout(
+    `/admin/payouts/${encodeURIComponent(payoutId)}/reconciliation/resolve`,
+    { action: "ATTACH_PROVIDER_ID", providerPayoutId },
   );
+}
+
+export async function createPayoutFailureChallengeAction(
+  payoutId: string,
+  reason: string,
+) {
+  return adminMutation<PayoutFailureChallenge>(
+    `/admin/payouts/${encodeURIComponent(payoutId)}/reconciliation/failure-challenge`,
+    { reason },
+  );
+}
+
+export async function confirmPayoutFailureAction(
+  payoutId: string,
+  challengeId: string,
+  confirmationPhrase: string,
+) {
+  return mutatePayout(
+    `/admin/payouts/${encodeURIComponent(payoutId)}/reconciliation/resolve`,
+    {
+      action: "CONFIRM_DEFINITIVE_FAILURE",
+      challengeId,
+      confirmationPhrase,
+    },
+  );
+}
+
+export async function getAdminPayoutRunsAction() {
+  const response = await adminGet<BackendRunsResponse>("/admin/payout-runs");
+  return response.runs;
+}
+
+export async function getAdminPayoutRunAction(runId: string) {
+  const response = await adminGet<BackendRunResponse>(
+    `/admin/payout-runs/${encodeURIComponent(runId)}`,
+  );
+  return response.run;
+}
+
+async function mutatePayout(
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<AdminPayout> {
+  const response = await adminMutation<BackendPayoutResponse>(path, body);
   return mapPayout(response.payout);
 }
 
 function mapPayout(payout: BackendPayout): AdminPayout {
-  const instructorName =
-    payout.instructor?.displayName?.trim() ||
-    payout.instructor?.username?.trim() ||
-    payout.instructor?.email?.trim() ||
-    "Formateur Certilys";
-
   return {
     id: payout.id,
-    instructorName,
+    instructorName:
+      payout.instructor?.displayName?.trim() ||
+      payout.instructor?.username?.trim() ||
+      payout.instructor?.email?.trim() ||
+      "Formateur Certilys",
     instructorHandle: payout.instructor?.username?.trim() || "",
     amount: payout.totalAmount,
     currency: payout.currency || "XOF",
@@ -99,14 +217,20 @@ function mapPayout(payout: BackendPayout): AdminPayout {
     status: payout.status,
     processedAt: payout.completedAt,
     failureReason: payout.failureReason ?? null,
+    provider: payout.provider,
+    providerPayoutId: payout.providerPayoutId ?? null,
+    providerStatus: payout.providerStatus ?? null,
+    runPeriod: payout.runPeriod ?? null,
+    retryable: payout.retryable ?? false,
+    requiresReconciliation: payout.requiresReconciliation ?? false,
+    lastSyncedAt: payout.lastSyncedAt ?? null,
+    reconciliationAttempts: payout.reconciliationAttempts ?? 0,
+    statusReason: payout.statusReason ?? null,
   };
 }
 
 function mapDestination(method: BackendPayout["method"]): AdminPayoutDestination {
-  if (!method) {
-    return { type: "UNKNOWN", label: "Méthode non renseignée" };
-  }
-
+  if (!method) return { type: "UNKNOWN", label: "Méthode non renseignée" };
   const label = payoutMethodLabel(method.payoutMethodType);
   if (method.payoutMethodType === "BANK_TRANSFER") {
     return {
@@ -117,7 +241,6 @@ function mapDestination(method: BackendPayout["method"]): AdminPayoutDestination
       bic: "",
     };
   }
-
   return {
     type: "MOBILE_MONEY",
     network: label,
@@ -143,4 +266,3 @@ function payoutMethodLabel(value?: string | null) {
       return "Méthode non renseignée";
   }
 }
-
