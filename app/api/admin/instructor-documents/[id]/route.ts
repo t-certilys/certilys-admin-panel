@@ -2,9 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
 const BACKEND_URL =
-  process.env.CERTILYS_BACKEND_URL ??
-  process.env.NEXT_PUBLIC_CERTILYS_BACKEND_URL ??
-  "http://localhost:4000";
+  process.env.CERTILYS_BACKEND_URL ?? "http://localhost:4000";
 
 type DocumentAccessResponse = {
   document: {
