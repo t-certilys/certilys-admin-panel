@@ -54,8 +54,10 @@ docker compose -p certilys-dev-admin config
 docker compose -p certilys-dev-admin build
 ```
 
-Le Dockerfile conserve `output: "standalone"`, un runtime non-root et
-`dumb-init`.
+Le build multi-stage est défini directement dans `docker-compose.yml` avec
+`dockerfile_inline`. Il conserve `output: "standalone"`, un runtime non-root
+et `dumb-init`. Cette propriété requiert Docker Compose 2.17 ou une version
+ultérieure ; aucun fichier `Dockerfile` séparé n’est nécessaire.
 
 ## Coexistence et test local
 
