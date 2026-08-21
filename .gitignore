@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.production.example
+
+# Local-only Docker Compose port publishing and developer overrides
+docker-compose.override.yml
 
 # vercel
 .vercel

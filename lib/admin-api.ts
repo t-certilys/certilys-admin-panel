@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 
 const BACKEND_URL =
-  process.env.CERTILYS_BACKEND_URL ?? process.env.NEXT_PUBLIC_CERTILYS_BACKEND_URL ?? "http://localhost:4000";
+  process.env.CERTILYS_BACKEND_URL ?? "http://localhost:4000";
 
 type ApiErrorBody = {
   message?: string | string[];

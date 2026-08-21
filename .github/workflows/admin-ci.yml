@@ -1,0 +1,55 @@
+name: Admin CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run full lint (known baseline debt)
+        continue-on-error: true
+        run: pnpm lint
+
+      - name: Lint deployment changes
+        run: >-
+          pnpm exec eslint
+          app/api/health/route.ts
+          'app/api/admin/instructor-documents/[id]/route.ts'
+          lib/admin-api.ts
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Build Docker Compose image
+        run: docker compose build
