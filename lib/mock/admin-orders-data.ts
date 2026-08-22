@@ -36,6 +36,7 @@ export interface OrderEvent {
 
 export interface AdminOrder {
   id: string;
+  orderKind?: "COURSE" | "LEONO_CREDITS";
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
   accessStatus: AccessStatus;
@@ -54,7 +55,16 @@ export interface AdminOrder {
     phone: string;
     country: string;
     city: string;
+    role?: string;
   };
+  leonoPurchase?: {
+    packId: string;
+    label: string;
+    credits: number;
+    amountXOF: number;
+    currency: string;
+    creditedAt: string | null;
+  } | null;
   formation: {
     id: string;
     title: string;

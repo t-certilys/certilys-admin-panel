@@ -15,6 +15,7 @@ import {
   LockKeyIcon,
   Money03Icon,
   Coins01Icon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -56,6 +57,7 @@ import {
   formatDate,
 } from "@/lib/mock/admin-orders-data";
 import { getAdminOrdersAction } from "@/lib/admin-orders-actions";
+import { LeonoCreditPacksDialog } from "@/components/certilys-ui/orders/leono-credit-packs-dialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types actions sensibles
@@ -161,6 +163,7 @@ async function simulateApiCall(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
+  const [creditPacksOpen, setCreditPacksOpen] = React.useState(false);
   // ── nuqs : état d'URL pour le statut de paiement (ex: ?paymentStatus=PENDING)
   const [paymentStatusParam, setPaymentStatusParam] = useQueryState("paymentStatus", {
     defaultValue: "",
@@ -692,6 +695,16 @@ export default function OrdersPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button
+            id="btn-manage-leono-credit-packs"
+            variant="outline"
+            size="sm"
+            onClick={() => setCreditPacksOpen(true)}
+            className="gap-2"
+          >
+            <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} />
+            Packs Léono
+          </Button>
+          <Button
             id="btn-export-orders-csv"
             variant="outline"
             size="sm"
@@ -713,6 +726,21 @@ export default function OrdersPage() {
           </Button>
         </div>
       </div>
+
+      <LeonoCreditPacksDialog
+        open={creditPacksOpen}
+        onOpenChange={setCreditPacksOpen}
+      />
+
+      {loadError ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-4 shrink-0" />
+          {loadError}
+        </div>
+      ) : null}
 
       {/* Cartes KPI compactes */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -943,7 +971,7 @@ export default function OrdersPage() {
                               </DropdownMenuItem>
 
                               {/* Action révocation active uniquement si accès en ligne */}
-                              {order.accessStatus === "ACTIVE" && (
+                              {order.orderKind !== "LEONO_CREDITS" && order.accessStatus === "ACTIVE" && (
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
@@ -951,7 +979,7 @@ export default function OrdersPage() {
                                     className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
                                     id={`revoke-action-${order.id}`}
                                   >
-                                    Révoquer l'accès
+                                    Révoquer l&apos;accès
                                   </DropdownMenuItem>
                                 </>
                               )}

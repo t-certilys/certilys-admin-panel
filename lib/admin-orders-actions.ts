@@ -15,6 +15,7 @@ import type {
 
 type BackendAdminOrder = {
   id: string;
+  orderKind: "COURSE" | "LEONO_CREDITS";
   reference: string;
   orderStatus: string;
   paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
@@ -42,6 +43,7 @@ type BackendAdminOrder = {
     city: string;
     phone: string;
     avatarUrl: string | null;
+    role: string;
   };
   formation: {
     id: string;
@@ -75,6 +77,14 @@ type BackendAdminOrder = {
     revokedAt: string | null;
     revocationReason: string | null;
   };
+  leonoPurchase: {
+    packId: string;
+    label: string;
+    credits: number;
+    amountXOF: number;
+    currency: string;
+    creditedAt: string | null;
+  } | null;
 };
 
 type OrdersListResponse = {
@@ -133,6 +143,7 @@ export async function getAdminOrderAction(
 function mapOrder(o: BackendAdminOrder): AdminOrder {
   return {
     id: o.id,
+    orderKind: o.orderKind,
     orderStatus: mapOrderStatus(o.orderStatus),
     paymentStatus: o.paymentStatus as PaymentStatus,
     accessStatus: o.accessStatus as AccessStatus,
@@ -151,7 +162,9 @@ function mapOrder(o: BackendAdminOrder): AdminOrder {
       phone: o.apprenant.phone || "",
       country: o.apprenant.country || "",
       city: o.apprenant.city || "",
+      role: o.apprenant.role,
     },
+    leonoPurchase: o.leonoPurchase,
     formation: {
       id: o.formation.id,
       title: o.formation.title,
@@ -221,7 +234,15 @@ function buildEvents(
     });
   }
 
-  if (o.access.createdAt && o.accessStatus === "ACTIVE") {
+  if (o.orderKind === "LEONO_CREDITS" && o.leonoPurchase?.creditedAt) {
+    events.push({
+      title: "Crédits ajoutés",
+      date: o.leonoPurchase.creditedAt,
+      description: `${o.leonoPurchase.credits.toLocaleString("fr-FR")} crédits Léono ont été ajoutés au compte.`,
+    });
+  }
+
+  if (o.orderKind !== "LEONO_CREDITS" && o.access.createdAt && o.accessStatus === "ACTIVE") {
     events.push({
       title: "Accès accordé",
       date: o.access.createdAt,

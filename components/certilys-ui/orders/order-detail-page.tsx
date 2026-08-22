@@ -315,6 +315,7 @@ export default function OrderDetailPage({
   const payCfg = paymentStatusConfig[order.paymentStatus];
   const accCfg = accessStatusConfig[order.accessStatus];
   const ordCfg = orderStatusConfig[order.orderStatus];
+  const isLeonoPurchase = order.orderKind === "LEONO_CREDITS";
 
   // Règle de sécurité : aucun accès ne peut être créé/activé si paymentStatus !== COMPLETED
   const isAccessDisabled = order.paymentStatus !== "COMPLETED";
@@ -350,7 +351,8 @@ export default function OrderDetailPage({
 
         {/* Boutons d'actions sensibles */}
         <div className="flex items-center gap-2 flex-wrap">
-          {(order.paymentStatus !== "COMPLETED" || order.accessStatus === "NOT_CREATED") && (
+          {(order.paymentStatus !== "COMPLETED" ||
+            (!isLeonoPurchase && order.accessStatus === "NOT_CREATED")) && (
             <Button
               id="btn-detail-sync-payment"
               variant="outline"
@@ -402,7 +404,7 @@ export default function OrderDetailPage({
             </Button>
           )}
 
-          {order.orderStatus === "PAID" &&
+          {!isLeonoPurchase && order.orderStatus === "PAID" &&
             order.paymentStatus === "COMPLETED" && (
               <Button
                 id="btn-detail-refund"
@@ -424,7 +426,7 @@ export default function OrderDetailPage({
       </div>
 
       {/* ── Alertes Anomalie & Règle Métier ─────────────────────────────── */}
-      {order.paymentStatus === "COMPLETED" && order.accessStatus === "NOT_CREATED" && (
+      {!isLeonoPurchase && order.paymentStatus === "COMPLETED" && order.accessStatus === "NOT_CREATED" && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3.5 text-sm">
           <HugeiconsIcon
             icon={Alert01Icon}
@@ -444,7 +446,7 @@ export default function OrderDetailPage({
         </div>
       )}
 
-      {isAccessDisabled && order.accessStatus === "ACTIVE" && (
+      {!isLeonoPurchase && isAccessDisabled && order.accessStatus === "ACTIVE" && (
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm text-destructive-foreground">
           <HugeiconsIcon
             icon={AlertCircleIcon}
@@ -557,7 +559,7 @@ export default function OrderDetailPage({
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
               <HugeiconsIcon icon={UserIcon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-              2. Apprenant (Client)
+              2. {order.apprenant.role === "INSTRUCTOR" ? "Formateur" : "Apprenant"} (Client)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -583,25 +585,32 @@ export default function OrderDetailPage({
           </CardContent>
         </Card>
 
-        {/* Formation */}
+        {/* Produit */}
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
               <HugeiconsIcon icon={Book01Icon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-              3. Formation souscrite
+              3. {isLeonoPurchase ? "Pack Léono acheté" : "Formation souscrite"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
-              <span className="text-xs text-muted-foreground font-medium block">Titre de la formation</span>
+              <span className="text-xs text-muted-foreground font-medium block">{isLeonoPurchase ? "Pack" : "Titre de la formation"}</span>
               <span className="font-semibold text-foreground block max-w-full truncate" title={order.formation.title}>
                 {order.formation.title}
               </span>
             </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-medium block">Formateur</span>
-              <span className="text-foreground">{order.formation.instructorName}</span>
-            </div>
+            {isLeonoPurchase ? (
+              <div>
+                <span className="text-xs text-muted-foreground font-medium block">Crédits</span>
+                <span className="text-foreground">{order.leonoPurchase?.credits.toLocaleString("fr-FR")} crédits IA</span>
+              </div>
+            ) : (
+              <div>
+                <span className="text-xs text-muted-foreground font-medium block">Formateur</span>
+                <span className="text-foreground">{order.formation.instructorName}</span>
+              </div>
+            )}
             <div>
               <span className="text-xs text-muted-foreground font-medium block">Prix d&apos;origine</span>
               <span className="text-foreground tabular-nums flex items-center gap-1">
@@ -610,7 +619,7 @@ export default function OrderDetailPage({
               </span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground font-medium block">Statut formation</span>
+              <span className="text-xs text-muted-foreground font-medium block">{isLeonoPurchase ? "Statut du crédit" : "Statut formation"}</span>
               <Badge variant="outline" className="text-[10px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20 px-1.5">
                 {order.formation.status}
               </Badge>
@@ -656,7 +665,7 @@ export default function OrderDetailPage({
       {/* ══════════════════════════════════════════════════════════════════════
           5. DETAILS PAIEMENT MONEROO & ACCES INSCRIPTION
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {!isLeonoPurchase ? <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Accès Inscription */}
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-3">
@@ -754,7 +763,7 @@ export default function OrderDetailPage({
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> : null}
 
       {/* ══════════════════════════════════════════════════════════════════════
           6. PAYLOAD DE PAIEMENT BRUT MONEROO (NON MODIFIABLE)
