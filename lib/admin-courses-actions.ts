@@ -170,6 +170,15 @@ export async function archiveAdminCourseAction(
   return mapCourse(response.course);
 }
 
+export async function restoreAdminCourseAction(
+  id: string,
+): Promise<AdminCourseSubmission> {
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(id)}/restore`,
+  );
+  return mapCourse(response.course);
+}
+
 export async function deleteAdminCourseAction(id: string): Promise<void> {
   await adminDelete<{ status: "COURSE_DELETED"; courseId: string }>(
     `/admin/courses/${encodeURIComponent(id)}`,

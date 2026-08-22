@@ -39,6 +39,7 @@ import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 import {
   approveAdminCourseAction,
   archiveAdminCourseAction,
+  restoreAdminCourseAction,
   deleteAdminCourseAction,
   getAdminCourseAction,
   rejectAdminCourseAction,
@@ -60,7 +61,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ActionType = "approve" | "request-changes" | "reject" | "archive" | "delete";
+type ActionType = "approve" | "request-changes" | "reject" | "archive" | "restore" | "delete";
 
 interface ActionDialogState {
   open: boolean;
@@ -131,6 +132,18 @@ const ACTION_CONFIG: Record<
     variant: "default",
     auditEvent: "COURSE_ARCHIVED",
     icon: Archive01Icon,
+  },
+  restore: {
+    label: "Restaurer la formation",
+    description:
+      "La formation retrouvera le statut qu’elle avait avant son archivage et redeviendra visible si elle était publiée.",
+    confirmLabel: "Restaurer la formation",
+    requiresReason: false,
+    reasonLabel: "",
+    reasonPlaceholder: "",
+    variant: "default",
+    auditEvent: "COURSE_RESTORED",
+    icon: CheckmarkCircle02Icon,
   },
   delete: {
     label: "Supprimer définitivement la formation",
@@ -321,6 +334,13 @@ export default function CourseDetailPage() {
       if (dialog.type === "archive") {
         const archivedCourse = await archiveAdminCourseAction(course.id);
         setCourse(archivedCourse);
+        setDialog((prev) => ({ ...prev, open: false, loading: false }));
+        return;
+      }
+
+      if (dialog.type === "restore") {
+        const restoredCourse = await restoreAdminCourseAction(course.id);
+        setCourse(restoredCourse);
         setDialog((prev) => ({ ...prev, open: false, loading: false }));
         return;
       }
@@ -555,6 +575,19 @@ export default function CourseDetailPage() {
             >
               <HugeiconsIcon icon={Archive01Icon} className="size-4" size={16} strokeWidth={1.5} />
               Masquer
+            </Button>
+          )}
+
+          {course.status === "ARCHIVED" && (
+            <Button
+              id="btn-detail-restore-course"
+              variant="outline"
+              size="sm"
+              className="gap-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+              onClick={() => openAction("restore")}
+            >
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4" size={16} strokeWidth={1.5} />
+              Restaurer
             </Button>
           )}
 
@@ -1301,7 +1334,13 @@ export default function CourseDetailPage() {
           }}
           title={dialogCfg.label}
           description={dialogCfg.description}
-          tone={dialogCfg.variant === "destructive" ? "danger" : dialog.type === "approve" ? "success" : "info"}
+          tone={
+            dialogCfg.variant === "destructive"
+              ? "danger"
+              : dialog.type === "approve" || dialog.type === "restore"
+                ? "success"
+                : "info"
+          }
           profile={{
             name: course.title,
             email: `${course.instructorName} · ${course.category}`,
