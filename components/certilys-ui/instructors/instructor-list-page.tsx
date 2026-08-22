@@ -16,6 +16,7 @@ import {
   AlertCircleIcon,
   InboxIcon,
   SearchRemoveIcon,
+  Edit02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -47,6 +48,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { ExpertiseDomainsDialog } from "@/components/certilys-ui/instructors/expertise-domains-dialog";
 import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
@@ -63,6 +65,10 @@ import {
   rejectInstructorApplicationAction,
   requestInstructorChangesAction,
 } from "@/lib/admin-instructors-actions";
+import {
+  getAdminExpertiseDomainsAction,
+  type AdminExpertiseDomain,
+} from "@/lib/admin-expertise-domains-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types actions
@@ -496,6 +502,10 @@ export default function InstructorsPage() {
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState(false);
   const [data, setData] = React.useState<InstructorApplication[]>([]);
+  const [expertiseDomains, setExpertiseDomains] = React.useState<
+    AdminExpertiseDomain[]
+  >([]);
+  const [expertiseDialogOpen, setExpertiseDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -516,6 +526,20 @@ export default function InstructorsPage() {
         setLoading(false);
       });
 
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let active = true;
+    getAdminExpertiseDomainsAction()
+      .then((domains) => {
+        if (active) setExpertiseDomains(domains);
+      })
+      .catch(() => {
+        // La liste reste utilisable si le catalogue est momentanément indisponible.
+      });
     return () => {
       active = false;
     };
@@ -691,7 +715,10 @@ export default function InstructorsPage() {
             <SelectValue placeholder="Toutes les spécialités" />
           </SelectTrigger>
           <SelectContent>
-            {INSTRUCTOR_SPECIALTIES.map((s) => (
+            {(expertiseDomains.length > 0
+              ? expertiseDomains.map((domain) => domain.name)
+              : INSTRUCTOR_SPECIALTIES
+            ).map((s) => (
               <SelectItem key={s} value={s}>
                 {s}
               </SelectItem>
@@ -781,6 +808,23 @@ export default function InstructorsPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Button
+            id="btn-manage-expertise-domains"
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setExpertiseDialogOpen(true)}
+          >
+            <HugeiconsIcon
+              icon={Edit02Icon}
+              className="size-4"
+              size={16}
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            <span>Domaines d’expertise</span>
+          </Button>
+
           <Button
             id="btn-export-csv"
             variant="outline"
@@ -1039,6 +1083,12 @@ export default function InstructorsPage() {
         state={dialog}
         onClose={closeDialog}
         onConfirm={handleConfirm}
+      />
+
+      <ExpertiseDomainsDialog
+        open={expertiseDialogOpen}
+        onOpenChange={setExpertiseDialogOpen}
+        onDomainsChange={setExpertiseDomains}
       />
     </div>
   );
