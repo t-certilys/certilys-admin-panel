@@ -1,6 +1,6 @@
 "use server";
 
-import { AdminApiError, adminGet, adminMutation } from "@/lib/admin-api";
+import { AdminApiError, adminDelete, adminGet, adminMutation } from "@/lib/admin-api";
 import type { AdminUser, AccountStatus, UserRole } from "@/lib/mock/admin-users-data";
 
 export type AdminUsersKpis = {
@@ -78,4 +78,10 @@ export async function disableAdminUserTwoFactorAction(
     { reason: reason.trim() },
   );
   return response.user;
+}
+
+export async function deleteAdminUserAction(id: string): Promise<void> {
+  await adminDelete<{ status: "USER_DELETED"; userId: string }>(
+    `/admin/users/${encodeURIComponent(id)}`,
+  );
 }

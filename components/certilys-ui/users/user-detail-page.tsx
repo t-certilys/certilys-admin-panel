@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft01Icon,
   Alert01Icon,
@@ -23,6 +23,7 @@ import {
   CheckmarkSquare01Icon,
   SecurityLockIcon,
   UserMultiple02Icon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -33,6 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 import {
   disableAdminUserTwoFactorAction,
+  deleteAdminUserAction,
   getAdminUserAction,
   reactivateAdminUserAction,
   suspendAdminUserAction,
@@ -52,7 +54,7 @@ import {
 // Types dialog
 // ─────────────────────────────────────────────────────────────────────────────
 
-type SensitiveAction = "suspend" | "reactivate" | "disable-2fa";
+type SensitiveAction = "suspend" | "reactivate" | "disable-2fa" | "delete";
 
 interface ActionDialogState {
   open: boolean;
@@ -112,6 +114,17 @@ const ACTION_CONFIG: Record<
     reasonPlaceholder: "Décrivez le cas critique justifiant cette action…",
     variant: "destructive",
     auditEvent: "TWO_FACTOR_DISABLED_BY_ADMIN",
+  },
+  delete: {
+    label: "Supprimer définitivement le compte",
+    description:
+      "Le compte et ses données associées seront supprimés définitivement. Si des commandes ou des ventes existent, l’opération sera refusée afin de préserver l’historique financier.",
+    confirmLabel: "Supprimer le compte",
+    requiresReason: false,
+    reasonLabel: "",
+    reasonPlaceholder: "",
+    variant: "destructive",
+    auditEvent: "USER_DELETED",
   },
 };
 
@@ -242,6 +255,7 @@ function CourseStatusBadge({ status }: { status: NonNullable<AdminUser["linkedAc
 
 export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
 
   const [user, setUser] = React.useState<AdminUser | null>(null);
@@ -294,6 +308,13 @@ export default function UserDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
+      if (dialog.type === "delete") {
+        await deleteAdminUserAction(user.id);
+        setDialog((prev) => ({ ...prev, open: false, loading: false, success: true }));
+        router.replace("/dashboard/users");
+        return;
+      }
+
       const updated =
         dialog.type === "suspend"
           ? await suspendAdminUserAction(user.id, reason)
@@ -421,6 +442,19 @@ export default function UserDetailPage() {
                 Désactiver 2FA
               </Button>
             )}
+
+            {!isAdminOrMod && (
+              <Button
+                id="btn-detail-delete"
+                variant="destructive"
+                size="sm"
+                className="gap-2"
+                onClick={() => openAction("delete")}
+              >
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" size={16} strokeWidth={1.5} />
+                Supprimer
+              </Button>
+            )}
           </div>
         )}
 
@@ -457,11 +491,20 @@ export default function UserDetailPage() {
       <Card className="border-border/60 shadow-none">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:gap-6">
           {/* Avatar */}
-          <div
-            className={`flex size-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold ${user.avatarColor}`}
-          >
-            {user.initials}
-          </div>
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatarUrl}
+              alt={`Photo de profil de ${user.fullName}`}
+              className="size-16 shrink-0 rounded-2xl border border-border/60 object-cover"
+            />
+          ) : (
+            <div
+              className={`flex size-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold ${user.avatarColor}`}
+            >
+              {user.initials}
+            </div>
+          )}
 
           {/* Infos */}
           <div className="flex-1 min-w-0 space-y-3">
@@ -797,6 +840,7 @@ export default function UserDetailPage() {
             name: user.fullName,
             email: user.email,
             initials: user.initials,
+            avatarUrl: user.avatarUrl,
             status: user.status,
           }}
           requireReason={dialogCfg.requiresReason}

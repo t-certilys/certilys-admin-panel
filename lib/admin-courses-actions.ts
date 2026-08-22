@@ -1,6 +1,6 @@
 "use server";
 
-import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
+import { adminDelete, adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
 import type {
   AdminCourseSubmission,
   CourseAssetType,
@@ -159,6 +159,21 @@ export async function requestAdminCourseChangesAction(
     { reason: reason.trim() },
   );
   return mapCourse(response.course);
+}
+
+export async function archiveAdminCourseAction(
+  id: string,
+): Promise<AdminCourseSubmission> {
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(id)}/archive`,
+  );
+  return mapCourse(response.course);
+}
+
+export async function deleteAdminCourseAction(id: string): Promise<void> {
+  await adminDelete<{ status: "COURSE_DELETED"; courseId: string }>(
+    `/admin/courses/${encodeURIComponent(id)}`,
+  );
 }
 
 function mapCourse(course: BackendCourse): AdminCourseSubmission {

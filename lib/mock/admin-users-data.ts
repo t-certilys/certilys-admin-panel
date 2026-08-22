@@ -83,6 +83,7 @@ export interface AdminUser {
   fullName: string;
   email: string;
   initials: string;
+  avatarUrl?: string | null;
   avatarColor: string;
   role: UserRole;
   status: AccountStatus;

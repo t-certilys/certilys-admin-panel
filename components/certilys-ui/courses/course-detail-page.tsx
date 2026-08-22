@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft01Icon,
   CheckmarkSquare01Icon,
@@ -26,6 +26,8 @@ import {
   GlobeIcon,
   Tag01Icon,
   Layout01Icon,
+  Archive01Icon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -36,6 +38,8 @@ import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 import {
   approveAdminCourseAction,
+  archiveAdminCourseAction,
+  deleteAdminCourseAction,
   getAdminCourseAction,
   rejectAdminCourseAction,
   requestAdminCourseChangesAction,
@@ -56,7 +60,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ActionType = "approve" | "request-changes" | "reject";
+type ActionType = "approve" | "request-changes" | "reject" | "archive" | "delete";
 
 interface ActionDialogState {
   open: boolean;
@@ -115,6 +119,30 @@ const ACTION_CONFIG: Record<
     variant: "destructive",
     auditEvent: "COURSE_REJECTED",
     icon: Cancel01Icon,
+  },
+  archive: {
+    label: "Masquer la formation",
+    description:
+      "La formation sera archivée et ne sera plus visible dans le catalogue public. Ses données et son historique seront conservés.",
+    confirmLabel: "Masquer la formation",
+    requiresReason: false,
+    reasonLabel: "",
+    reasonPlaceholder: "",
+    variant: "default",
+    auditEvent: "COURSE_ARCHIVED",
+    icon: Archive01Icon,
+  },
+  delete: {
+    label: "Supprimer définitivement la formation",
+    description:
+      "La formation et son contenu seront supprimés définitivement. L’opération sera refusée si elle est liée à une commande.",
+    confirmLabel: "Supprimer la formation",
+    requiresReason: false,
+    reasonLabel: "",
+    reasonPlaceholder: "",
+    variant: "destructive",
+    auditEvent: "COURSE_DELETED",
+    icon: Delete02Icon,
   },
 };
 
@@ -229,6 +257,7 @@ function AssetBadge({ asset }: { asset: CourseAsset }) {
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
 
   // Récupération simulée
@@ -271,7 +300,10 @@ export default function CourseDetailPage() {
   });
 
   function openAction(type: ActionType) {
-    if (course?.status !== "SUBMITTED") return;
+    if (
+      (type === "approve" || type === "request-changes" || type === "reject") &&
+      course?.status !== "SUBMITTED"
+    ) return;
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -286,6 +318,20 @@ export default function CourseDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
+      if (dialog.type === "archive") {
+        const archivedCourse = await archiveAdminCourseAction(course.id);
+        setCourse(archivedCourse);
+        setDialog((prev) => ({ ...prev, open: false, loading: false }));
+        return;
+      }
+
+      if (dialog.type === "delete") {
+        await deleteAdminCourseAction(course.id);
+        setDialog((prev) => ({ ...prev, open: false, loading: false }));
+        router.replace("/dashboard/courses");
+        return;
+      }
+
       const updatedCourse = await applyCourseDecision(
         dialog.type,
         course.id,
@@ -497,6 +543,30 @@ export default function CourseDetailPage() {
               strokeWidth={1.5}
             />
             Rejeter
+          </Button>
+
+          {course.status !== "ARCHIVED" && (
+            <Button
+              id="btn-detail-archive-course"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => openAction("archive")}
+            >
+              <HugeiconsIcon icon={Archive01Icon} className="size-4" size={16} strokeWidth={1.5} />
+              Masquer
+            </Button>
+          )}
+
+          <Button
+            id="btn-detail-delete-course"
+            variant="destructive"
+            size="sm"
+            className="gap-2"
+            onClick={() => openAction("delete")}
+          >
+            <HugeiconsIcon icon={Delete02Icon} className="size-4" size={16} strokeWidth={1.5} />
+            Supprimer
           </Button>
         </div>
       </div>

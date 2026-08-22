@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft01Icon,
   CheckmarkSquare01Icon,
@@ -22,6 +22,7 @@ import {
   SquareArrowUp01Icon,
   Shield01Icon,
   UserIcon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -39,6 +40,7 @@ import {
 } from "@/lib/mock/admin-instructors-data";
 import {
   approveInstructorApplicationAction,
+  deleteInstructorAccountAction,
   getInstructorApplicationAction,
   rejectInstructorApplicationAction,
   requestInstructorChangesAction,
@@ -48,7 +50,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ActionType = "approve" | "request-changes" | "reject";
+type ActionType = "approve" | "request-changes" | "reject" | "delete-account";
 
 interface ActionDialogState {
   open: boolean;
@@ -107,6 +109,18 @@ const ACTION_CONFIG: Record<
     variant: "destructive",
     auditEvent: "INSTRUCTOR_REJECTED",
     icon: Cancel01Icon,
+  },
+  "delete-account": {
+    label: "Supprimer définitivement le compte formateur",
+    description:
+      "Le compte formateur, ses formations sans ventes et ses données associées seront supprimés définitivement. L’opération sera refusée si un historique financier existe.",
+    confirmLabel: "Supprimer le compte",
+    requiresReason: false,
+    reasonLabel: "",
+    reasonPlaceholder: "",
+    variant: "destructive",
+    auditEvent: "USER_DELETED",
+    icon: Delete02Icon,
   },
 };
 
@@ -187,6 +201,7 @@ function StatusBadge({ status }: { status: InstructorApplicationStatus }) {
 
 export default function InstructorDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params.id;
 
 
@@ -233,7 +248,10 @@ export default function InstructorDetailPage() {
   });
 
   function openAction(type: ActionType) {
-    if (!instructor || !isReviewableApplication(instructor.status)) return;
+    if (
+      !instructor ||
+      (type !== "delete-account" && !isReviewableApplication(instructor.status))
+    ) return;
 
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
@@ -249,6 +267,13 @@ export default function InstructorDetailPage() {
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
+      if (dialog.type === "delete-account") {
+        await deleteInstructorAccountAction(instructor.id);
+        setDialog((prev) => ({ ...prev, open: false, loading: false }));
+        router.replace("/dashboard/instructors");
+        return;
+      }
+
       const updated = await submitInstructorDecision(
         dialog.type,
         instructor.id,
@@ -363,9 +388,10 @@ export default function InstructorDetailPage() {
           <StatusBadge status={instructor.status} />
         </div>
 
-        {/* Boutons d'action décisionnelle */}
-        {canReviewApplication ? (
+        {/* Actions du compte et du dossier */}
         <div className="flex items-center gap-2 flex-wrap">
+          {canReviewApplication ? (
+          <>
           {/* Bouton Approuver (Désactivé si manque critique) */}
           <Button
             id="btn-detail-approve"
@@ -405,8 +431,20 @@ export default function InstructorDetailPage() {
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" size={16} strokeWidth={1.5} />
             Rejeter
           </Button>
+          </>
+          ) : null}
+
+          <Button
+            id="btn-detail-delete-instructor-account"
+            variant="destructive"
+            size="sm"
+            className="gap-2"
+            onClick={() => openAction("delete-account")}
+          >
+            <HugeiconsIcon icon={Delete02Icon} className="size-4" size={16} strokeWidth={1.5} />
+            Supprimer le compte
+          </Button>
         </div>
-        ) : null}
       </div>
 
       {/* ── Alerte de blocage si dossier incomplet ─────────────────────────── */}

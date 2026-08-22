@@ -42,6 +42,7 @@ export interface VerificationCompleteness {
 
 export interface InstructorApplication {
   id: string;
+  userId?: string;
   /** Nom complet du formateur */
   fullName: string;
   email: string;

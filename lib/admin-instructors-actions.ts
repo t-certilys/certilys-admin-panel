@@ -1,6 +1,6 @@
 "use server";
 
-import { adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
+import { adminDelete, adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
 import type {
   InstructorApplication,
   InstructorApplicationStatus,
@@ -9,6 +9,7 @@ import type {
 
 type BackendInstructorApplication = {
   id: string;
+  userId: string;
   displayName?: string | null;
   username?: string | null;
   title?: string | null;
@@ -101,6 +102,12 @@ export async function requestInstructorChangesAction(
   return mapApplication(response.application);
 }
 
+export async function deleteInstructorAccountAction(id: string): Promise<void> {
+  await adminDelete<{ status: "USER_DELETED"; userId: string }>(
+    `/admin/instructor-applications/${encodeURIComponent(id)}/account`,
+  );
+}
+
 function mapApplication(
   application: BackendInstructorApplication,
 ): InstructorApplication {
@@ -131,6 +138,7 @@ function mapApplication(
 
   return {
     id: application.id,
+    userId: application.userId,
     fullName,
     email: application.contactEmail || "email-non-renseigne@certilys.local",
     initials: getInitials(fullName),
