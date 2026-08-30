@@ -57,8 +57,51 @@ export async function adminDelete<T>(
   return adminJsonMutation<T>("DELETE", path, body);
 }
 
+export async function adminPut<T>(
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
+  return adminJsonMutation<T>("PUT", path, body);
+}
+
+export async function adminUpload<T>(path: string, body: FormData): Promise<T> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const csrf = await getCsrf(attempt > 0);
+    const cookieHeader = mergeCookieHeader(
+      await currentCookieHeader(),
+      csrf.setCookieHeaders,
+    );
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "X-CSRF-Token": csrf.token,
+        Cookie: cookieHeader,
+      },
+      body,
+      cache: "no-store",
+    });
+    await storeResponseCookies(response);
+
+    try {
+      return await parseResponse<T>(response);
+    } catch (error) {
+      if (
+        attempt === 0 &&
+        error instanceof AdminApiError &&
+        error.status === 403 &&
+        error.code === "CSRF_INVALID"
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new AdminApiError("Token CSRF absent ou invalide.", 403, "CSRF_INVALID");
+}
+
 async function adminJsonMutation<T>(
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T> {

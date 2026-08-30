@@ -10,6 +10,7 @@ import {
   InvoiceIcon,
   UserStar01Icon,
   Wallet01Icon,
+  Configuration01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
@@ -93,6 +94,12 @@ export const dashboardNavConfig: DashboardNavGroup[] = [
         shortTitle: "Audits",
         url: "/dashboard/audit-logs",
         icon: Shield01Icon,
+      },
+      {
+        title: "Configurations du site",
+        shortTitle: "Site",
+        url: "/dashboard/site-configuration",
+        icon: Configuration01Icon,
       },
       {
         title: "Paramètres",

@@ -48,7 +48,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
-import { ExpertiseDomainsDialog } from "@/components/certilys-ui/instructors/expertise-domains-dialog";
 import { downloadCsvForExcel } from "@/lib/csv-export";
 
 import {
@@ -505,7 +504,6 @@ export default function InstructorsPage() {
   const [expertiseDomains, setExpertiseDomains] = React.useState<
     AdminExpertiseDomain[]
   >([]);
-  const [expertiseDialogOpen, setExpertiseDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -813,16 +811,18 @@ export default function InstructorsPage() {
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() => setExpertiseDialogOpen(true)}
+            asChild
           >
-            <HugeiconsIcon
-              icon={Edit02Icon}
-              className="size-4"
-              size={16}
-              strokeWidth={1.5}
-              aria-hidden="true"
-            />
-            <span>Domaines d’expertise</span>
+            <Link href="/dashboard/site-configuration?tab=referentiels">
+              <HugeiconsIcon
+                icon={Edit02Icon}
+                className="size-4"
+                size={16}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span>Domaines d’expertise</span>
+            </Link>
           </Button>
 
           <Button
@@ -1085,11 +1085,6 @@ export default function InstructorsPage() {
         onConfirm={handleConfirm}
       />
 
-      <ExpertiseDomainsDialog
-        open={expertiseDialogOpen}
-        onOpenChange={setExpertiseDialogOpen}
-        onDomainsChange={setExpertiseDomains}
-      />
     </div>
   );
 }
