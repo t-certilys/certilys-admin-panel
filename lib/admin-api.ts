@@ -65,6 +65,21 @@ export async function adminPut<T>(
 }
 
 export async function adminUpload<T>(path: string, body: FormData): Promise<T> {
+  return adminFormMutation<T>("POST", path, body);
+}
+
+export async function adminPatchUpload<T>(
+  path: string,
+  body: FormData,
+): Promise<T> {
+  return adminFormMutation<T>("PATCH", path, body);
+}
+
+async function adminFormMutation<T>(
+  method: "POST" | "PATCH",
+  path: string,
+  body: FormData,
+): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const csrf = await getCsrf(attempt > 0);
     const cookieHeader = mergeCookieHeader(
@@ -72,7 +87,7 @@ export async function adminUpload<T>(path: string, body: FormData): Promise<T> {
       csrf.setCookieHeaders,
     );
     const response = await fetch(`${BACKEND_URL}${path}`, {
-      method: "POST",
+      method,
       headers: {
         "X-CSRF-Token": csrf.token,
         Cookie: cookieHeader,
@@ -158,9 +173,20 @@ async function getCsrf(forceRefresh = false) {
   return { token: body.csrfToken, setCookieHeaders };
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
+export async function parseResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
-  const body = text ? (JSON.parse(text) as ApiErrorBody | T) : ({} as T);
+  let body: ApiErrorBody | T;
+  try {
+    body = text ? (JSON.parse(text) as ApiErrorBody | T) : ({} as T);
+  } catch {
+    throw new AdminApiError(
+      response.status === 413
+        ? "La photo dépasse la taille maximale autorisée de 5 Mo."
+        : "Le serveur a renvoyé une réponse invalide.",
+      response.status,
+    );
+  }
+
   if (response.ok) {
     return body as T;
   }
@@ -170,7 +196,10 @@ async function parseResponse<T>(response: Response): Promise<T> {
     ? errorBody.message[0]
     : errorBody.message;
   throw new AdminApiError(
-    message || "Une erreur est survenue.",
+    message ||
+      (response.status === 413
+        ? "La photo dépasse la taille maximale autorisée de 5 Mo."
+        : "Une erreur est survenue."),
     response.status,
     errorBody.code,
   );
@@ -209,7 +238,11 @@ async function storeResponseCookies(response: Response) {
     cookieStore.set(name, value, {
       httpOnly,
       secure,
-      sameSite: sameSiteMatch?.[1]?.toLowerCase() as "strict" | "lax" | "none" | undefined,
+      sameSite: sameSiteMatch?.[1]?.toLowerCase() as
+        | "strict"
+        | "lax"
+        | "none"
+        | undefined,
       expires: expiresMatch?.[1] ? new Date(expiresMatch[1]) : undefined,
       path: "/",
     });

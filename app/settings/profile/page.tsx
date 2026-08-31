@@ -14,7 +14,13 @@ import { toast } from "sonner";
 
 import { AddonInput } from "@/components/ui/addon-input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CharacterCounter } from "@/components/ui/character-counter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +42,11 @@ type ProfileFormState = {
   avatarUrl: string;
   bio: string;
   website: string;
+};
+
+type AvatarUploadError = {
+  message?: string;
+  code?: string;
 };
 
 const emptyProfile: ProfileFormState = {
@@ -60,13 +71,39 @@ function profileFromUser(user: AdminUser): ProfileFormState {
   };
 }
 
+async function uploadAdminAvatar(file: File): Promise<AdminUser> {
+  const formData = new FormData();
+  formData.append("avatar", file, file.name || "avatar");
+
+  const response = await fetch("/api/admin/profile/avatar", {
+    method: "PATCH",
+    body: formData,
+  });
+
+  const body = (await response.json().catch(() => ({}))) as
+    | AdminUser
+    | AvatarUploadError;
+
+  if (!response.ok) {
+    const error = body as AvatarUploadError;
+    if (response.status === 413) {
+      throw new Error("La photo dépasse la taille maximale autorisée de 5 Mo.");
+    }
+    throw new Error(error.message || "Impossible d’envoyer la photo de profil.");
+  }
+
+  return body as AdminUser;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [user, setUser] = React.useState<AdminUser | null>(null);
   const [profile, setProfile] = React.useState<ProfileFormState>(emptyProfile);
-  const [initialProfile, setInitialProfile] = React.useState<ProfileFormState>(emptyProfile);
+  const [initialProfile, setInitialProfile] =
+    React.useState<ProfileFormState>(emptyProfile);
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [removeAvatar, setRemoveAvatar] = React.useState(false);
 
   React.useEffect(() => {
@@ -109,18 +146,29 @@ export default function ProfilePage() {
 
   const resetForm = React.useCallback(() => {
     setProfile(initialProfile);
+    setAvatarFile(null);
     setRemoveAvatar(false);
   }, [initialProfile]);
 
-  const handleAvatarChange = React.useCallback((value: string) => {
-    updateProfile("avatarUrl", value);
+  const handleAvatarChange = React.useCallback((file: File) => {
+    setAvatarFile(file);
     setRemoveAvatar(false);
-  }, [updateProfile]);
+  }, []);
 
   const handleAvatarReset = React.useCallback(() => {
+    setAvatarFile(null);
     updateProfile("avatarUrl", "");
     setRemoveAvatar(true);
   }, [updateProfile]);
+
+  const applySavedUser = React.useCallback((savedUser: AdminUser) => {
+    const nextProfile = profileFromUser(savedUser);
+    setUser(savedUser);
+    setProfile(nextProfile);
+    setInitialProfile(nextProfile);
+    setAvatarFile(null);
+    setRemoveAvatar(false);
+  }, []);
 
   const handleSave = React.useCallback(async () => {
     setIsSaving(true);
@@ -132,10 +180,7 @@ export default function ProfilePage() {
         phoneNumber: profile.phoneNumber,
         bio: profile.bio,
         website: profile.website,
-        ...(profile.avatarUrl.startsWith("data:")
-          ? { avatarDataUrl: profile.avatarUrl }
-          : {}),
-        ...(removeAvatar ? { removeAvatar: true as const } : {}),
+        ...(removeAvatar && !avatarFile ? { removeAvatar: true as const } : {}),
       });
 
       if (!result.success || !result.user) {
@@ -143,17 +188,31 @@ export default function ProfilePage() {
         return;
       }
 
-      const nextProfile = profileFromUser(result.user);
-      setUser(result.user);
-      setProfile(nextProfile);
-      setInitialProfile(nextProfile);
-      setRemoveAvatar(false);
+      let savedUser = result.user;
+
+      if (avatarFile) {
+        try {
+          savedUser = await uploadAdminAvatar(avatarFile);
+        } catch (error) {
+          const savedProfile = profileFromUser(result.user);
+          setUser(result.user);
+          setInitialProfile(savedProfile);
+          toast.error(
+            error instanceof Error
+              ? `Informations enregistrées, mais la photo n’a pas été modifiée : ${error.message}`
+              : "Informations enregistrées, mais la photo n’a pas pu être envoyée.",
+          );
+          return;
+        }
+      }
+
+      applySavedUser(savedUser);
       toast.success("Profil administrateur mis à jour.");
       router.refresh();
     } finally {
       setIsSaving(false);
     }
-  }, [profile, removeAvatar, router]);
+  }, [avatarFile, profile, removeAvatar, applySavedUser, router]);
 
   const fallbackText = profile.displayName || user?.email || "Admin";
 
@@ -177,6 +236,7 @@ export default function ProfilePage() {
           <CardContent>
             <ProfileImageUpload
               value={profile.avatarUrl}
+              file={avatarFile}
               onChange={handleAvatarChange}
               onReset={handleAvatarReset}
               fallbackText={fallbackText}
@@ -190,13 +250,19 @@ export default function ProfilePage() {
             <div className="grid gap-2">
               <Label htmlFor="fullname">Nom complet</Label>
               <div className="relative">
-                <HugeiconsIcon icon={UserIcon} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <HugeiconsIcon
+                  icon={UserIcon}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  size={18}
+                />
                 <Input
                   id="fullname"
                   placeholder="Nom complet"
                   className="pl-10"
                   value={profile.displayName}
-                  onChange={(event) => updateProfile("displayName", event.target.value)}
+                  onChange={(event) =>
+                    updateProfile("displayName", event.target.value)
+                  }
                   disabled={isLoading || isSaving}
                 />
               </div>
@@ -204,7 +270,9 @@ export default function ProfilePage() {
             <div className="grid gap-2">
               <Label htmlFor="username">Nom d’utilisateur</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  @
+                </span>
                 <Input
                   id="username"
                   placeholder="nom-utilisateur"
@@ -220,7 +288,11 @@ export default function ProfilePage() {
           <div className="grid gap-2">
             <Label htmlFor="email">Adresse e-mail professionnelle</Label>
             <div className="relative">
-              <HugeiconsIcon icon={Mail01Icon} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <HugeiconsIcon
+                icon={Mail01Icon}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={18}
+              />
               <Input
                 id="email"
                 type="email"
@@ -255,7 +327,11 @@ export default function ProfilePage() {
           <div className="grid gap-2">
             <Label htmlFor="bio">Bio</Label>
             <div className="relative">
-              <HugeiconsIcon icon={InformationCircleIcon} className="absolute left-3 top-3 text-muted-foreground" size={18} />
+              <HugeiconsIcon
+                icon={InformationCircleIcon}
+                className="absolute left-3 top-3 text-muted-foreground"
+                size={18}
+              />
               <Textarea
                 id="bio"
                 placeholder="Présentez brièvement votre rôle dans l’équipe Certilys."
@@ -285,7 +361,11 @@ export default function ProfilePage() {
         <Separator className="bg-border/50" />
 
         <div className="flex items-center justify-end gap-3">
-          <Button variant="outline" onClick={resetForm} disabled={isLoading || isSaving}>
+          <Button
+            variant="outline"
+            onClick={resetForm}
+            disabled={isLoading || isSaving}
+          >
             Annuler
           </Button>
           <Button
@@ -295,7 +375,11 @@ export default function ProfilePage() {
           >
             {isSaving ? (
               <>
-                <HugeiconsIcon icon={Loading02Icon} size={18} className="animate-spin" />
+                <HugeiconsIcon
+                  icon={Loading02Icon}
+                  size={18}
+                  className="animate-spin"
+                />
                 Enregistrement...
               </>
             ) : (

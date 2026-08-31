@@ -28,7 +28,6 @@ export type AdminProfileUpdateInput = {
   phoneNumber?: string;
   bio?: string;
   website?: string;
-  avatarDataUrl?: string;
   removeAvatar?: true;
 };
 
