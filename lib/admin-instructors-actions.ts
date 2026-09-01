@@ -4,6 +4,7 @@ import { adminDelete, adminGet, adminMutation, AdminApiError } from "@/lib/admin
 import type {
   InstructorApplication,
   InstructorApplicationStatus,
+  IdentityDocument,
   VerificationPayload,
 } from "@/lib/mock/admin-instructors-data";
 
@@ -23,6 +24,11 @@ type BackendInstructorApplication = {
   publishedCoursesCount?: number;
   submittedCoursesCount?: number;
   documentAccess?: { endpoint: string; expiresInSeconds: number } | null;
+  documentAccesses?: Array<{
+    kind: "IDENTITY_DOCUMENT" | "ESTABLISHMENT_DECLARATION" | "COMPANY_IFU" | "TRADE_REGISTER";
+    endpoint: string;
+    expiresInSeconds: number;
+  }>;
 };
 
 type ApplicationResponse = {
@@ -51,14 +57,11 @@ export async function getInstructorApplicationAction(
       `/admin/instructor-applications/${encodeURIComponent(id)}`,
     );
     const application = mapApplication(response.application);
-    if (response.application.documentAccess?.endpoint) {
-      application.verificationPayload = withDocumentUrl(
-        application.verificationPayload,
-        `/api/admin/instructor-documents/${encodeURIComponent(
-          response.application.id,
-        )}`,
-      );
-    }
+    application.verificationPayload = withDocumentUrls(
+      application.verificationPayload,
+      response.application.id,
+      response.application.documentAccesses,
+    );
     return application;
   } catch (error) {
     if (error instanceof AdminApiError && error.status === 404) {
@@ -118,13 +121,18 @@ function mapApplication(
   const verification = normalizeVerificationPayload(
     application.verificationPayload,
   );
+  const isCompanyV2 =
+    verification?.schemaVersion === 2 &&
+    verification.legalStatus === "COMPANY";
   const completeness = {
     hasLegalIdentity: Boolean(
-      verification?.legalStatus &&
-        verification.legalLastName &&
-        verification.legalFirstNames &&
-        verification.nationality &&
-        verification.birthDate,
+      isCompanyV2
+        ? verification.companyLegalName && verification.nationality
+        : verification?.legalStatus &&
+            verification.legalLastName &&
+            verification.legalFirstNames &&
+            verification.nationality &&
+            verification.birthDate,
     ),
     hasAddress: Boolean(
       verification?.addressLine &&
@@ -133,6 +141,11 @@ function mapApplication(
         verification.residenceCountry,
     ),
     hasIdentityDocument: Boolean(verification?.identityDocument),
+    hasCompanyDocuments: Boolean(
+      verification?.companyDocuments?.establishmentDeclaration &&
+        verification.companyDocuments.companyIfu &&
+        verification.companyDocuments.tradeRegister,
+    ),
     hasHonorDeclaration: Boolean(verification?.honorDeclarationAccepted),
   };
 
@@ -155,7 +168,9 @@ function mapApplication(
     isComplete:
       completeness.hasLegalIdentity &&
       completeness.hasAddress &&
-      completeness.hasIdentityDocument &&
+      (isCompanyV2
+        ? completeness.hasCompanyDocuments
+        : completeness.hasIdentityDocument) &&
       completeness.hasHonorDeclaration,
     lastDecisionReason: application.applicationNotes ?? undefined,
     lastDecisionAt: application.applicationReviewedAt ?? undefined,
@@ -179,20 +194,60 @@ function normalizeVerificationPayload(
           payload.honorDeclarationAcceptedAt,
       }
     : undefined;
-  return { ...payload, identityDocument: document };
-}
-
-function withDocumentUrl(
-  payload: VerificationPayload | undefined,
-  fileUrl: string,
-) {
-  if (!payload?.identityDocument) return payload;
+  const normalizeDocument = (item?: IdentityDocument) =>
+    item
+      ? {
+          ...item,
+          fileName: item.fileName || fileNameFromUrl(item.fileUrl),
+          uploadedAt: item.uploadedAt || payload.honorDeclarationAcceptedAt,
+        }
+      : undefined;
   return {
     ...payload,
-    identityDocument: {
-      ...payload.identityDocument,
-      fileUrl,
-    },
+    identityDocument: normalizeDocument(document),
+    companyDocuments: payload.companyDocuments
+      ? {
+          establishmentDeclaration: normalizeDocument(
+            payload.companyDocuments.establishmentDeclaration,
+          ),
+          companyIfu: normalizeDocument(payload.companyDocuments.companyIfu),
+          tradeRegister: normalizeDocument(
+            payload.companyDocuments.tradeRegister,
+          ),
+        }
+      : undefined,
+  };
+}
+
+function withDocumentUrls(
+  payload: VerificationPayload | undefined,
+  applicationId: string,
+  accesses?: BackendInstructorApplication["documentAccesses"],
+) {
+  if (!payload) return payload;
+  const available = new Set(accesses?.map((access) => access.kind) ?? []);
+  const proxyUrl = (kind: string) =>
+    `/api/admin/instructor-documents/${encodeURIComponent(applicationId)}?kind=${encodeURIComponent(kind)}`;
+  return {
+    ...payload,
+    identityDocument:
+      payload.identityDocument &&
+      (available.has("IDENTITY_DOCUMENT") || !accesses)
+        ? { ...payload.identityDocument, fileUrl: proxyUrl("IDENTITY_DOCUMENT") }
+        : payload.identityDocument,
+    companyDocuments: payload.companyDocuments
+      ? {
+          establishmentDeclaration: payload.companyDocuments.establishmentDeclaration
+            ? { ...payload.companyDocuments.establishmentDeclaration, fileUrl: proxyUrl("ESTABLISHMENT_DECLARATION") }
+            : undefined,
+          companyIfu: payload.companyDocuments.companyIfu
+            ? { ...payload.companyDocuments.companyIfu, fileUrl: proxyUrl("COMPANY_IFU") }
+            : undefined,
+          tradeRegister: payload.companyDocuments.tradeRegister
+            ? { ...payload.companyDocuments.tradeRegister, fileUrl: proxyUrl("TRADE_REGISTER") }
+            : undefined,
+        }
+      : undefined,
   };
 }
 

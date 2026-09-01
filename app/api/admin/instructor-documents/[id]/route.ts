@@ -15,16 +15,29 @@ type DocumentAccessResponse = {
 };
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  const kind = request.nextUrl.searchParams.get("kind") ?? "IDENTITY_DOCUMENT";
+  const allowedKinds = new Set([
+    "IDENTITY_DOCUMENT",
+    "ESTABLISHMENT_DECLARATION",
+    "COMPANY_IFU",
+    "TRADE_REGISTER",
+  ]);
+  if (!allowedKinds.has(kind)) {
+    return NextResponse.json(
+      { message: "Le type de document est invalide." },
+      { status: 400 },
+    );
+  }
   const cookieHeader = await currentCookieHeader();
 
   const accessResponse = await fetch(
     `${BACKEND_URL}/admin/instructor-applications/${encodeURIComponent(
       id,
-    )}/document-url`,
+    )}/documents/${encodeURIComponent(kind)}/url`,
     {
       method: "GET",
       headers: {

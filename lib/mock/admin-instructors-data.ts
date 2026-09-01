@@ -10,25 +10,32 @@ export type InstructorApplicationStatus =
   | "CHANGES_REQUESTED";
 
 export interface IdentityDocument {
-  type: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE";
+  type?: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE";
   fileUrl: string;
   fileName: string;
   fileMimeType: "application/pdf" | "image/jpeg" | "image/png";
   fileSize: number;
-  uploadedAt: string;
+  uploadedAt?: string;
 }
 
 export interface VerificationPayload {
+  schemaVersion?: 2;
   legalStatus: "INDIVIDUAL" | "ORGANIZATION" | "COMPANY";
-  legalLastName: string;
-  legalFirstNames: string;
+  legalLastName?: string;
+  legalFirstNames?: string;
+  companyLegalName?: string;
   nationality: string;
   addressLine: string;
   postalCode: string;
   city: string;
   residenceCountry: string;
-  birthDate: string;
+  birthDate?: string;
   identityDocument?: IdentityDocument;
+  companyDocuments?: {
+    establishmentDeclaration?: IdentityDocument;
+    companyIfu?: IdentityDocument;
+    tradeRegister?: IdentityDocument;
+  };
   honorDeclarationAccepted: boolean;
   honorDeclarationAcceptedAt: string;
 }
@@ -37,6 +44,7 @@ export interface VerificationCompleteness {
   hasLegalIdentity: boolean;
   hasAddress: boolean;
   hasIdentityDocument: boolean;
+  hasCompanyDocuments?: boolean;
   hasHonorDeclaration: boolean;
 }
 
@@ -793,7 +801,7 @@ export const mockInstructorApplications: InstructorApplication[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Non renseigné";
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "short",

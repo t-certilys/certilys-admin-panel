@@ -35,6 +35,7 @@ import { DecisionDialog, DocumentPreviewDialog } from "@/components/certilys-ui/
 import {
   type InstructorApplication,
   type InstructorApplicationStatus,
+  type IdentityDocument,
   instructorStatusConfig,
   formatDate,
 } from "@/lib/mock/admin-instructors-data";
@@ -129,7 +130,7 @@ const ACTION_CONFIG: Record<
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatFileSize(bytes?: number): string {
-  if (!bytes) return "—";
+  if (!bytes) return "Non renseigné";
   if (bytes < 1024) return `${bytes} o`;
   const kb = bytes / 1024;
   if (kb < 1024) return `${kb.toFixed(1)} Ko`;
@@ -140,14 +141,14 @@ function formatFileSize(bytes?: number): string {
 function getLegalStatusLabel(
   status?: "INDIVIDUAL" | "ORGANIZATION" | "COMPANY",
 ): string {
-  if (!status) return "—";
+  if (!status) return "Non renseigné";
   if (status === "INDIVIDUAL") return "Personne physique (Individuel)";
   if (status === "ORGANIZATION") return "Organisation / Association";
   return "Personne morale (Société / Cabinet)";
 }
 
 function getDocTypeLabel(type?: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE"): string {
-  if (!type) return "—";
+  if (!type) return "Non renseigné";
   switch (type) {
     case "ID_CARD":
       return "Carte Nationale d'Identité";
@@ -158,6 +159,44 @@ function getDocTypeLabel(type?: "ID_CARD" | "PASSPORT" | "DRIVING_LICENSE"): str
     default:
       return "Document";
   }
+}
+
+function CompanyDocumentRow({
+  label,
+  document,
+}: {
+  label: string;
+  document?: IdentityDocument;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 p-3 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium text-foreground">{label}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {document?.fileName ?? "Document manquant"}
+          </p>
+        </div>
+        {document?.fileUrl ? (
+          <Button variant="outline" size="xs" asChild>
+            <a href={document.fileUrl} target="_blank" rel="noopener noreferrer">
+              <HugeiconsIcon icon={SquareArrowUp01Icon} className="size-3.5" />
+              Ouvrir
+            </a>
+          </Button>
+        ) : (
+          <Badge variant="outline" className="text-destructive">
+            Manquant
+          </Badge>
+        )}
+      </div>
+      {document ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {document.fileMimeType} · {formatFileSize(document.fileSize)}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,7 +374,15 @@ export default function InstructorDetailPage() {
 
   // ── Analyse de la complétude du dossier
   const hasPayload = !!instructor.verificationPayload;
-  const isDocMissing = !instructor.verificationPayload?.identityDocument;
+  const isCompany =
+    instructor.verificationPayload?.schemaVersion === 2 &&
+    instructor.verificationPayload.legalStatus === "COMPANY";
+  const isDocMissing = isCompany
+    ? !instructor.verificationPayload?.companyDocuments
+        ?.establishmentDeclaration ||
+      !instructor.verificationPayload?.companyDocuments?.companyIfu ||
+      !instructor.verificationPayload?.companyDocuments?.tradeRegister
+    : !instructor.verificationPayload?.identityDocument;
   const completeness = instructor.verificationCompleteness;
 
   // Une condition critique est manquante si :
@@ -347,7 +394,9 @@ export default function InstructorDetailPage() {
     isDocMissing ||
     !completeness?.hasLegalIdentity ||
     !completeness?.hasAddress ||
-    !completeness?.hasIdentityDocument ||
+    (isCompany
+      ? !completeness?.hasCompanyDocuments
+      : !completeness?.hasIdentityDocument) ||
     !completeness?.hasHonorDeclaration;
   const canReviewApplication = isReviewableApplication(instructor.status);
 
@@ -356,7 +405,9 @@ export default function InstructorDetailPage() {
   if (!hasPayload) {
     approvalBlockReason = "Le dossier administratif n'a pas encore été soumis.";
   } else if (isDocMissing) {
-    approvalBlockReason = "La pièce d'identité officielle est absente du dossier.";
+    approvalBlockReason = isCompany
+      ? "Un ou plusieurs documents obligatoires de l'entreprise sont absents du dossier."
+      : "La pièce d'identité officielle est absente du dossier.";
   } else if (!completeness?.hasLegalIdentity) {
     approvalBlockReason = "L'identité légale déclarée est incomplète ou invalide.";
   } else if (!completeness?.hasAddress) {
@@ -563,35 +614,43 @@ export default function InstructorDetailPage() {
                 </span>
               </div>
               <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
-                <span className="text-muted-foreground col-span-1">Nom légal</span>
+                <span className="text-muted-foreground col-span-1">
+                  {isCompany ? "Nom légal de l’entreprise" : "Nom légal"}
+                </span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.legalLastName || "—"}
+                  {isCompany
+                    ? instructor.verificationPayload?.companyLegalName || "Non renseigné"
+                    : instructor.verificationPayload?.legalLastName || "Non renseigné"}
                 </span>
               </div>
-              <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
-                <span className="text-muted-foreground col-span-1">Prénom(s)</span>
-                <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.legalFirstNames || "—"}
-                </span>
-              </div>
+              {!isCompany ? (
+                <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
+                  <span className="text-muted-foreground col-span-1">Prénom(s)</span>
+                  <span className="font-medium text-foreground col-span-2 text-right">
+                    {instructor.verificationPayload?.legalFirstNames || "Non renseigné"}
+                  </span>
+                </div>
+              ) : null}
               <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                 <span className="text-muted-foreground col-span-1">Nationalité</span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.nationality || "—"}
+                  {instructor.verificationPayload?.nationality || "Non renseigné"}
                 </span>
               </div>
-              <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
-                <span className="text-muted-foreground col-span-1">Date de naissance</span>
-                <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.birthDate
-                    ? formatDate(instructor.verificationPayload.birthDate)
-                    : "—"}
-                </span>
-              </div>
+              {!isCompany ? (
+                <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
+                  <span className="text-muted-foreground col-span-1">Date de naissance</span>
+                  <span className="font-medium text-foreground col-span-2 text-right">
+                    {instructor.verificationPayload?.birthDate
+                      ? formatDate(instructor.verificationPayload.birthDate)
+                      : "Non renseignée"}
+                  </span>
+                </div>
+              ) : null}
               <div className="grid grid-cols-3 py-1 gap-2">
                 <span className="text-muted-foreground col-span-1">Pays de résidence</span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.residenceCountry || "—"}
+                  {instructor.verificationPayload?.residenceCountry || "Non renseigné"}
                 </span>
               </div>
             </CardContent>
@@ -609,25 +668,25 @@ export default function InstructorDetailPage() {
               <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                 <span className="text-muted-foreground col-span-1">Adresse</span>
                 <span className="font-medium text-foreground col-span-2 text-right break-words">
-                  {instructor.verificationPayload?.addressLine || "—"}
+                  {instructor.verificationPayload?.addressLine || "Non renseigné"}
                 </span>
               </div>
               <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                 <span className="text-muted-foreground col-span-1">Code postal</span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.postalCode || "—"}
+                  {instructor.verificationPayload?.postalCode || "Non renseigné"}
                 </span>
               </div>
               <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                 <span className="text-muted-foreground col-span-1">Ville</span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.city || "—"}
+                  {instructor.verificationPayload?.city || "Non renseigné"}
                 </span>
               </div>
               <div className="grid grid-cols-3 py-1 gap-2">
                 <span className="text-muted-foreground col-span-1">Pays</span>
                 <span className="font-medium text-foreground col-span-2 text-right">
-                  {instructor.verificationPayload?.residenceCountry || "—"}
+                  {instructor.verificationPayload?.residenceCountry || "Non renseigné"}
                 </span>
               </div>
             </CardContent>
@@ -638,11 +697,36 @@ export default function InstructorDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <HugeiconsIcon icon={InvoiceIcon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-                3. Pièce d&apos;identité officielle
+                {isCompany
+                  ? "3. Documents de l’entreprise"
+                  : "3. Pièce d’identité officielle"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
-              {isDocMissing ? (
+              {isCompany ? (
+                <div className="space-y-3">
+                  <CompanyDocumentRow
+                    label="Déclaration d’établissement"
+                    document={
+                      instructor.verificationPayload?.companyDocuments
+                        ?.establishmentDeclaration
+                    }
+                  />
+                  <CompanyDocumentRow
+                    label="IFU de l’entreprise"
+                    document={
+                      instructor.verificationPayload?.companyDocuments?.companyIfu
+                    }
+                  />
+                  <CompanyDocumentRow
+                    label="Registre de commerce"
+                    document={
+                      instructor.verificationPayload?.companyDocuments
+                        ?.tradeRegister
+                    }
+                  />
+                </div>
+              ) : isDocMissing ? (
                 <div className="text-center py-6 flex flex-col items-center gap-2 flex-1 justify-center">
                   <HugeiconsIcon icon={Alert01Icon} className="size-8 text-destructive" size={32} strokeWidth={1.5} />
                   <span className="text-sm font-medium text-destructive">Document d&apos;identité manquant</span>
@@ -662,13 +746,13 @@ export default function InstructorDetailPage() {
                     <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                       <span className="text-muted-foreground col-span-1">Nom fichier</span>
                       <span className="font-medium text-foreground col-span-2 text-right truncate">
-                        {instructor.verificationPayload?.identityDocument?.fileName || "—"}
+                        {instructor.verificationPayload?.identityDocument?.fileName || "Non renseigné"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
                       <span className="text-muted-foreground col-span-1">Format</span>
                       <span className="font-medium text-foreground col-span-2 text-right">
-                        {instructor.verificationPayload?.identityDocument?.fileMimeType || "—"}
+                        {instructor.verificationPayload?.identityDocument?.fileMimeType || "Non renseigné"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 py-1 border-b border-border/30 gap-2">
@@ -682,7 +766,7 @@ export default function InstructorDetailPage() {
                       <span className="font-medium text-foreground col-span-2 text-right">
                         {instructor.verificationPayload?.identityDocument?.uploadedAt
                           ? formatDate(instructor.verificationPayload.identityDocument.uploadedAt)
-                          : "—"}
+                          : "Non renseigné"}
                       </span>
                     </div>
                   </div>
@@ -761,7 +845,7 @@ export default function InstructorDetailPage() {
                   <span className="font-medium text-foreground col-span-2 text-right">
                     {instructor.verificationPayload?.honorDeclarationAcceptedAt
                       ? formatDate(instructor.verificationPayload.honorDeclarationAcceptedAt)
-                      : "—"}
+                      : "Non renseigné"}
                   </span>
                 </div>
               </div>
