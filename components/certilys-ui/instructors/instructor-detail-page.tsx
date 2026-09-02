@@ -114,7 +114,7 @@ const ACTION_CONFIG: Record<
   "delete-account": {
     label: "Supprimer définitivement le compte formateur",
     description:
-      "Le compte formateur, ses formations sans ventes et ses données associées seront supprimés définitivement. L’opération sera refusée si un historique financier existe.",
+      "Cette action est irréversible. Si le compte possède un historique financier, ses commandes et ventes seront conservées tandis que le compte sera supprimé et anonymisé.",
     confirmLabel: "Supprimer le compte",
     requiresReason: false,
     reasonLabel: "",
@@ -243,14 +243,9 @@ export default function InstructorDetailPage() {
   const router = useRouter();
   const id = params.id;
 
-
-
-  // Récupération simulée
   const [instructor, setInstructor] =
     React.useState<InstructorApplication | null>(null);
   const [loadError, setLoadError] = React.useState(false);
-
-  // État de prévisualisation du document
   const [previewOpen, setPreviewOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -261,11 +256,8 @@ export default function InstructorDetailPage() {
     getInstructorApplicationAction(id)
       .then((application) => {
         if (!active) return;
-        if (application) {
-          setInstructor(application);
-        } else {
-          setLoadError(true);
-        }
+        if (application) setInstructor(application);
+        else setLoadError(true);
       })
       .catch(() => {
         if (!active) return;
@@ -277,7 +269,6 @@ export default function InstructorDetailPage() {
     };
   }, [id]);
 
-  // Dialog action
   const [dialog, setDialog] = React.useState<ActionDialogState>({
     open: false,
     type: null,
@@ -291,7 +282,6 @@ export default function InstructorDetailPage() {
       !instructor ||
       (type !== "delete-account" && !isReviewableApplication(instructor.status))
     ) return;
-
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -318,21 +308,17 @@ export default function InstructorDetailPage() {
         instructor.id,
         reason,
       );
-
       setInstructor(updated);
-
       setDialog((prev) => ({ ...prev, open: false, loading: false }));
     } catch (err) {
       setDialog((prev) => ({
         ...prev,
         loading: false,
-        error:
-          err instanceof Error ? err.message : "Une erreur est survenue.",
+        error: err instanceof Error ? err.message : "Une erreur est survenue.",
       }));
     }
   }
 
-  // Erreur de chargement
   if (loadError) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 px-4">
@@ -340,9 +326,7 @@ export default function InstructorDetailPage() {
           <HugeiconsIcon icon={AlertCircleIcon} className="size-7 text-destructive" size={28} strokeWidth={1.5} />
         </div>
         <div className="text-center">
-          <h1 className="text-lg font-semibold text-foreground">
-            Formateur introuvable
-          </h1>
+          <h1 className="text-lg font-semibold text-foreground">Formateur introuvable</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Ce dossier n&apos;existe pas ou a été supprimé.
           </p>
@@ -370,37 +354,29 @@ export default function InstructorDetailPage() {
     );
   }
 
-
-
-  // ── Analyse de la complétude du dossier
   const hasPayload = !!instructor.verificationPayload;
   const isCompany =
     instructor.verificationPayload?.schemaVersion === 2 &&
     instructor.verificationPayload.legalStatus === "COMPANY";
   const isDocMissing = isCompany
-    ? !instructor.verificationPayload?.companyDocuments
-        ?.establishmentDeclaration ||
+    ? !instructor.verificationPayload?.companyDocuments?.establishmentDeclaration ||
       !instructor.verificationPayload?.companyDocuments?.companyIfu ||
       !instructor.verificationPayload?.companyDocuments?.tradeRegister
     : !instructor.verificationPayload?.identityDocument;
   const completeness = instructor.verificationCompleteness;
+  const requiredDocumentsComplete = isCompany
+    ? Boolean(completeness?.hasCompanyDocuments)
+    : Boolean(completeness?.hasIdentityDocument);
 
-  // Une condition critique est manquante si :
-  // - pas de payload du tout (dossier non soumis)
-  // - completeness contient au moins un critère faux
-  // - le document d'identité est absent
   const isCriticalMissing =
     !hasPayload ||
     isDocMissing ||
     !completeness?.hasLegalIdentity ||
     !completeness?.hasAddress ||
-    (isCompany
-      ? !completeness?.hasCompanyDocuments
-      : !completeness?.hasIdentityDocument) ||
+    !requiredDocumentsComplete ||
     !completeness?.hasHonorDeclaration;
   const canReviewApplication = isReviewableApplication(instructor.status);
 
-  // Calcul du message d'explication si blocage d'approbation
   let approvalBlockReason = "";
   if (!hasPayload) {
     approvalBlockReason = "Le dossier administratif n'a pas encore été soumis.";
@@ -416,12 +392,8 @@ export default function InstructorDetailPage() {
     approvalBlockReason = "La déclaration sur l'honneur n'a pas été acceptée.";
   }
 
-
   return (
     <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
-
-
-      {/* ── En-tête de page ──────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Button
@@ -439,50 +411,48 @@ export default function InstructorDetailPage() {
           <StatusBadge status={instructor.status} />
         </div>
 
-        {/* Actions du compte et du dossier */}
         <div className="flex items-center gap-2 flex-wrap">
           {canReviewApplication ? (
-          <>
-          {/* Bouton Approuver (Désactivé si manque critique) */}
-          <Button
-            id="btn-detail-approve"
-            variant="outline"
-            size="sm"
-            className={`gap-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 ${
-              isCriticalMissing ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            onClick={() => {
-              if (isCriticalMissing) return;
-              openAction("approve");
-            }}
-            disabled={isCriticalMissing}
-          >
-            <HugeiconsIcon icon={CheckmarkSquare01Icon} className="size-4" size={16} strokeWidth={1.5} />
-            Approuver
-          </Button>
+            <>
+              <Button
+                id="btn-detail-approve"
+                variant="outline"
+                size="sm"
+                className={`gap-2 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 ${
+                  isCriticalMissing ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                onClick={() => {
+                  if (isCriticalMissing) return;
+                  openAction("approve");
+                }}
+                disabled={isCriticalMissing}
+              >
+                <HugeiconsIcon icon={CheckmarkSquare01Icon} className="size-4" size={16} strokeWidth={1.5} />
+                Approuver
+              </Button>
 
-          <Button
-            id="btn-detail-request-changes"
-            variant="outline"
-            size="sm"
-            className="gap-2 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
-            onClick={() => openAction("request-changes")}
-          >
-            <HugeiconsIcon icon={MessageLock01Icon} className="size-4" size={16} strokeWidth={1.5} />
-            Corrections
-          </Button>
+              <Button
+                id="btn-detail-request-changes"
+                variant="outline"
+                size="sm"
+                className="gap-2 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+                onClick={() => openAction("request-changes")}
+              >
+                <HugeiconsIcon icon={MessageLock01Icon} className="size-4" size={16} strokeWidth={1.5} />
+                Corrections
+              </Button>
 
-          <Button
-            id="btn-detail-reject"
-            variant="outline"
-            size="sm"
-            className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
-            onClick={() => openAction("reject")}
-          >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" size={16} strokeWidth={1.5} />
-            Rejeter
-          </Button>
-          </>
+              <Button
+                id="btn-detail-reject"
+                variant="outline"
+                size="sm"
+                className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+                onClick={() => openAction("reject")}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} className="size-4" size={16} strokeWidth={1.5} />
+                Rejeter
+              </Button>
+            </>
           ) : null}
 
           <Button
@@ -498,14 +468,11 @@ export default function InstructorDetailPage() {
         </div>
       </div>
 
-      {/* ── Alerte de blocage si dossier incomplet ─────────────────────────── */}
       {canReviewApplication && isCriticalMissing && (
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm text-destructive-foreground">
           <HugeiconsIcon icon={Alert01Icon} className="size-5 shrink-0 mt-0.5 text-destructive" size={20} strokeWidth={1.5} />
           <div className="space-y-1">
-            <strong className="font-semibold block text-red-600">
-              Approbation désactivée
-            </strong>
+            <strong className="font-semibold block text-red-600">Approbation désactivée</strong>
             <span className="text-muted-foreground text-xs">
               {approvalBlockReason} Veuillez demander des corrections ou rejeter cette candidature.
             </span>
@@ -513,17 +480,11 @@ export default function InstructorDetailPage() {
         </div>
       )}
 
-      {/* ── En-tête profil formateur ─────────────────────────────────────── */}
       <Card className="border-border/60 shadow-none">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:gap-6">
-          {/* Avatar */}
-          <div
-            className={`flex size-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold ${instructor.avatarColor}`}
-          >
+          <div className={`flex size-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold ${instructor.avatarColor}`}>
             {instructor.initials}
           </div>
-
-          {/* Infos */}
           <div className="flex-1 min-w-0 space-y-3">
             <div>
               <h1 className="text-xl font-semibold text-foreground font-sora">
@@ -531,7 +492,6 @@ export default function InstructorDetailPage() {
               </h1>
               <p className="text-sm text-muted-foreground">{instructor.email}</p>
             </div>
-
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <HugeiconsIcon icon={Mail01Icon} className="size-3.5 shrink-0" size={14} strokeWidth={1.5} />
@@ -551,22 +511,14 @@ export default function InstructorDetailPage() {
               </span>
             </div>
           </div>
-
-          {/* Dossier complet badge */}
           <div className="shrink-0">
             {instructor.isComplete && !isCriticalMissing ? (
-              <Badge
-                variant="outline"
-                className="gap-1.5 text-emerald-600 border-emerald-500/40 bg-emerald-500/10"
-              >
+              <Badge variant="outline" className="gap-1.5 text-emerald-600 border-emerald-500/40 bg-emerald-500/10">
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3.5" size={14} strokeWidth={1.5} />
                 Dossier complet
               </Badge>
             ) : (
-              <Badge
-                variant="outline"
-                className="gap-1.5 text-amber-600 border-amber-500/40 bg-amber-500/10"
-              >
+              <Badge variant="outline" className="gap-1.5 text-amber-600 border-amber-500/40 bg-amber-500/10">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5" size={14} strokeWidth={1.5} />
                 Dossier incomplet
               </Badge>
@@ -575,7 +527,6 @@ export default function InstructorDetailPage() {
         </CardContent>
       </Card>
 
-      {/* ── Dossier administratif complet ─────────────────────────────────── */}
       <h2 className="text-lg font-semibold tracking-tight text-foreground font-sora mt-2">
         Dossier de Vérification Administrative
       </h2>
@@ -587,9 +538,7 @@ export default function InstructorDetailPage() {
               <HugeiconsIcon icon={InvoiceIcon} size={24} strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">
-                Aucun dossier administratif
-              </p>
+              <p className="text-sm font-medium text-foreground">Aucun dossier administratif</p>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-sm mx-auto">
                 Ce formateur n&apos;a soumis aucune donnée administrative de vérification légale.
               </p>
@@ -598,7 +547,6 @@ export default function InstructorDetailPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Bloc 1 : Informations Légales */}
           <Card className="border-border/60 shadow-none flex flex-col justify-between">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -656,7 +604,6 @@ export default function InstructorDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Bloc 2 : Adresse déclarée */}
           <Card className="border-border/60 shadow-none flex flex-col justify-between">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -692,14 +639,11 @@ export default function InstructorDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Bloc 3 : Pièce d'identité officielle */}
           <Card className="border-border/60 shadow-none flex flex-col justify-between">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <HugeiconsIcon icon={InvoiceIcon} className="size-4 text-primary shrink-0" size={16} strokeWidth={1.5} />
-                {isCompany
-                  ? "3. Documents de l’entreprise"
-                  : "3. Pièce d’identité officielle"}
+                {isCompany ? "3. Documents de l’entreprise" : "3. Pièce d’identité officielle"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
@@ -707,23 +651,15 @@ export default function InstructorDetailPage() {
                 <div className="space-y-3">
                   <CompanyDocumentRow
                     label="Déclaration d’établissement"
-                    document={
-                      instructor.verificationPayload?.companyDocuments
-                        ?.establishmentDeclaration
-                    }
+                    document={instructor.verificationPayload?.companyDocuments?.establishmentDeclaration}
                   />
                   <CompanyDocumentRow
                     label="IFU de l’entreprise"
-                    document={
-                      instructor.verificationPayload?.companyDocuments?.companyIfu
-                    }
+                    document={instructor.verificationPayload?.companyDocuments?.companyIfu}
                   />
                   <CompanyDocumentRow
                     label="Registre de commerce"
-                    document={
-                      instructor.verificationPayload?.companyDocuments
-                        ?.tradeRegister
-                    }
+                    document={instructor.verificationPayload?.companyDocuments?.tradeRegister}
                   />
                 </div>
               ) : isDocMissing ? (
@@ -781,12 +717,7 @@ export default function InstructorDetailPage() {
                       <HugeiconsIcon icon={EyeIcon} className="size-3.5" size={14} strokeWidth={1.5} />
                       Prévisualiser
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      className="gap-1 px-2.5 h-8 text-[11px]"
-                      asChild
-                    >
+                    <Button variant="outline" size="xs" className="gap-1 px-2.5 h-8 text-[11px]" asChild>
                       <a
                         href={instructor.verificationPayload?.identityDocument?.fileUrl}
                         target="_blank"
@@ -796,12 +727,7 @@ export default function InstructorDetailPage() {
                         Nouvel onglet
                       </a>
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      className="gap-1 px-2.5 h-8 text-[11px]"
-                      asChild
-                    >
+                    <Button variant="outline" size="xs" className="gap-1 px-2.5 h-8 text-[11px]" asChild>
                       <a
                         href={instructor.verificationPayload?.identityDocument?.fileUrl}
                         download={instructor.verificationPayload?.identityDocument?.fileName}
@@ -816,7 +742,6 @@ export default function InstructorDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Bloc 4 : Déclaration d'honneur */}
           <Card className="border-border/60 shadow-none flex flex-col justify-between">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -849,7 +774,6 @@ export default function InstructorDetailPage() {
                   </span>
                 </div>
               </div>
-
               <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground italic border border-border/40 mt-4">
                 « Le formateur certifie sur l&apos;honneur l&apos;exactitude absolue des informations soumises dans ce dossier et s&apos;engage à fournir tout justificatif légal sur simple demande. »
               </div>
@@ -858,9 +782,7 @@ export default function InstructorDetailPage() {
         </div>
       )}
 
-      {/* ── Checklist de validation + Historique décision ───────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-2">
-        {/* Checklist Validation */}
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -874,7 +796,6 @@ export default function InstructorDetailPage() {
             </p>
 
             <div className="space-y-2.5 mt-2">
-              {/* Critère 1 */}
               <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/40 bg-muted/10">
                 <span className="text-sm font-medium text-foreground flex items-center gap-2">
                   {completeness?.hasLegalIdentity ? (
@@ -891,7 +812,6 @@ export default function InstructorDetailPage() {
                 )}
               </div>
 
-              {/* Critère 2 */}
               <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/40 bg-muted/10">
                 <span className="text-sm font-medium text-foreground flex items-center gap-2">
                   {completeness?.hasAddress ? (
@@ -908,24 +828,28 @@ export default function InstructorDetailPage() {
                 )}
               </div>
 
-              {/* Critère 3 */}
               <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/40 bg-muted/10">
                 <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                  {completeness?.hasIdentityDocument ? (
+                  {requiredDocumentsComplete ? (
                     <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4 text-emerald-500" size={16} strokeWidth={1.5} />
                   ) : (
                     <HugeiconsIcon icon={Alert01Icon} className="size-4 text-destructive" size={16} strokeWidth={1.5} />
                   )}
-                  Pièce d&apos;identité officielle fournie
+                  {isCompany
+                    ? "Documents obligatoires de l’entreprise fournis"
+                    : "Pièce d’identité officielle fournie"}
                 </span>
-                {completeness?.hasIdentityDocument ? (
-                  <Badge variant="outline" className="text-emerald-600 bg-emerald-500/10 border-emerald-500/30 text-[10px]">Présente</Badge>
+                {requiredDocumentsComplete ? (
+                  <Badge variant="outline" className="text-emerald-600 bg-emerald-500/10 border-emerald-500/30 text-[10px]">
+                    {isCompany ? "Complets" : "Présente"}
+                  </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-destructive bg-destructive/10 border-destructive/30 text-[10px]">Absente</Badge>
+                  <Badge variant="outline" className="text-destructive bg-destructive/10 border-destructive/30 text-[10px]">
+                    {isCompany ? "Incomplets" : "Absente"}
+                  </Badge>
                 )}
               </div>
 
-              {/* Critère 4 */}
               <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/40 bg-muted/10">
                 <span className="text-sm font-medium text-foreground flex items-center gap-2">
                   {completeness?.hasHonorDeclaration ? (
@@ -945,7 +869,6 @@ export default function InstructorDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Historique décisions */}
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -957,7 +880,6 @@ export default function InstructorDetailPage() {
             <p className="text-xs text-muted-foreground">
               Toutes les décisions relatives à ce profil sont enregistrées de façon permanente et inaltérable dans les registres d&apos;audit de Certilys.
             </p>
-
             <div className="space-y-3.5">
               {instructor.lastDecisionAt ? (
                 <div className="rounded-xl border border-border/50 bg-card p-4 space-y-2.5">
@@ -988,7 +910,6 @@ export default function InstructorDetailPage() {
         </Card>
       </div>
 
-      {/* ── Formations soumises (Dossier Pédagogique) ───────────────────── */}
       <Card className="border-border/60 shadow-none mt-2">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1006,12 +927,11 @@ export default function InstructorDetailPage() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-2.5">
-            Le détail complet et pédagogique de ces  {instructor.coursesSubmitted} formation(s) est consultable dans l&apos;onglet de validation des cours.
+            Le détail complet et pédagogique de ces {instructor.coursesSubmitted} formation(s) est consultable dans l&apos;onglet de validation des cours.
           </p>
         </CardContent>
       </Card>
 
-      {/* ── Dialog prévisualisation de pièce d'identité ───────────────────── */}
       <DocumentPreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
@@ -1021,7 +941,6 @@ export default function InstructorDetailPage() {
         mimeType={instructor.verificationPayload?.identityDocument?.fileMimeType}
       />
 
-      {/* ── Dialog confirmation d'action décisionnelle ───────────────────── */}
       {dialog.type ? (
         <DecisionDialog
           open={dialog.open}
@@ -1041,6 +960,19 @@ export default function InstructorDetailPage() {
           reasonLabel={ACTION_CONFIG[dialog.type].reasonLabel}
           reasonPlaceholder={ACTION_CONFIG[dialog.type].reasonPlaceholder}
           minReasonLength={10}
+          confirmationValue={
+            dialog.type === "delete-account" ? instructor.fullName : undefined
+          }
+          confirmationLabel={
+            dialog.type === "delete-account"
+              ? "Nom du formateur à supprimer"
+              : undefined
+          }
+          confirmationPlaceholder={
+            dialog.type === "delete-account"
+              ? "Saisissez exactement le nom affiché ci-dessus"
+              : undefined
+          }
           confirmLabel={ACTION_CONFIG[dialog.type].confirmLabel}
           cancelLabel="Annuler"
           loading={dialog.loading}
