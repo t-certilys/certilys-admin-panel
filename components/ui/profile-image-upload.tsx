@@ -4,8 +4,14 @@ import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Camera01Icon } from "@hugeicons/core-free-icons";
 
+import { ImageCropDialog } from "@/components/certilys-ui/image-crop-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  IMAGE_UPLOAD_MAX_BYTES,
+  IMAGE_UPLOAD_TYPES,
+  imageUploadSchema,
+} from "@/lib/images/image-upload.schema";
 import { cn } from "@/lib/utils";
 
 interface ProfileImageUploadProps {
@@ -19,12 +25,8 @@ interface ProfileImageUploadProps {
   className?: string;
 }
 
-export const PROFILE_IMAGE_ALLOWED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
-export const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const PROFILE_IMAGE_ALLOWED_TYPES = IMAGE_UPLOAD_TYPES;
+export const PROFILE_IMAGE_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
 const sizeMap = {
   sm: "size-16",
@@ -46,6 +48,10 @@ export function ProfileImageUpload({
   const [isDragging, setIsDragging] = React.useState(false);
   const [fileError, setFileError] = React.useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | undefined>();
+  const [cropSource, setCropSource] = React.useState<{
+    url: string;
+    name: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (!file) {
@@ -58,33 +64,31 @@ export function ProfileImageUpload({
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
 
+  React.useEffect(() => {
+    return () => {
+      if (cropSource) URL.revokeObjectURL(cropSource.url);
+    };
+  }, [cropSource]);
+
   const handleAvatarClick = () => {
     if (disabled) return;
     fileInputRef.current?.click();
   };
 
   const processFile = (nextFile: File) => {
-    if (
-      !PROFILE_IMAGE_ALLOWED_TYPES.includes(
-        nextFile.type as (typeof PROFILE_IMAGE_ALLOWED_TYPES)[number],
-      )
-    ) {
-      setFileError("Format non supporté. Utilisez une image JPEG, PNG ou WebP.");
-      return;
-    }
-
-    if (nextFile.size === 0) {
-      setFileError("Le fichier sélectionné est vide.");
-      return;
-    }
-
-    if (nextFile.size > PROFILE_IMAGE_MAX_BYTES) {
-      setFileError("Image trop volumineuse. La taille maximale autorisée est de 5 Mo.");
+    const validation = imageUploadSchema.safeParse(nextFile);
+    if (!validation.success) {
+      setFileError(
+        validation.error.issues[0]?.message ?? "La photo n’est pas valide.",
+      );
       return;
     }
 
     setFileError(null);
-    onChange(nextFile);
+    setCropSource({
+      url: URL.createObjectURL(nextFile),
+      name: nextFile.name,
+    });
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +128,9 @@ export function ProfileImageUpload({
   const displayedImage = previewUrl || value;
 
   return (
-    <div className={cn("flex flex-col sm:flex-row items-center gap-6", className)}>
+    <div
+      className={cn("flex flex-col sm:flex-row items-center gap-6", className)}
+    >
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -146,7 +152,9 @@ export function ProfileImageUpload({
           disabled && "cursor-not-allowed opacity-80",
         )}
       >
-        <Avatar className={cn(sizeMap[size], "border-2 border-background shadow-sm")}>
+        <Avatar
+          className={cn(sizeMap[size], "border-2 border-background shadow-sm")}
+        >
           <AvatarImage src={displayedImage} className="object-cover" />
           <AvatarFallback className="bg-primary/10 text-primary font-medium">
             {fallbackText
@@ -217,6 +225,23 @@ export function ProfileImageUpload({
           {fileError || "Aucune erreur de fichier."}
         </p>
       </div>
+
+      <ImageCropDialog
+        open={Boolean(cropSource)}
+        imageSrc={cropSource?.url ?? null}
+        title="Ajuster la photo de profil"
+        description="Déplacez la photo dans le cercle et ajustez le zoom avant de confirmer."
+        confirmLabel="Utiliser cette photo"
+        onOpenChange={(open) => {
+          if (!open) setCropSource(null);
+        }}
+        onConfirm={(blob) => {
+          const baseName = cropSource?.name.replace(/\.[^.]+$/, "") || "avatar";
+          onChange(
+            new File([blob], `${baseName}.webp`, { type: "image/webp" }),
+          );
+        }}
+      />
     </div>
   );
 }

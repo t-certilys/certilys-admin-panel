@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { getImageProps } from "next/image";
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
@@ -17,6 +18,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import { AppDialog } from "@/components/certilys-ui/dialogs";
+import { ImageCropDialog } from "@/components/certilys-ui/image-crop-dialog";
 import { ExpertiseDomainsDialog } from "@/components/certilys-ui/instructors/expertise-domains-dialog";
 import {
   AlertDialog,
@@ -59,6 +61,7 @@ import {
   updateVerifiedInstructorsSettingsAction,
   uploadFeaturedInstructorImageAction,
 } from "@/lib/admin-site-config-actions";
+import { imageUploadSchema } from "@/lib/images/image-upload.schema";
 
 type EditorState = {
   entry: AdminFeaturedInstructor | null;
@@ -68,6 +71,18 @@ type EditorState = {
   imageAlt: string;
   image: File | null;
 };
+
+type CropRequest =
+  | {
+      kind: "entry";
+      entry: AdminFeaturedInstructor;
+      source: string;
+    }
+  | {
+      kind: "editor";
+      source: string;
+      fileName: string;
+    };
 
 const EMPTY_EDITOR: EditorState = {
   entry: null,
@@ -95,6 +110,9 @@ export function SiteConfigurationPage() {
   const [deleteTarget, setDeleteTarget] =
     React.useState<AdminFeaturedInstructor | null>(null);
   const [expertiseOpen, setExpertiseOpen] = React.useState(false);
+  const [cropRequest, setCropRequest] = React.useState<CropRequest | null>(
+    null,
+  );
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -108,7 +126,9 @@ export function SiteConfigurationPage() {
       setEntries(nextEntries);
       setEligible(nextEligible);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Chargement impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Chargement impossible.",
+      );
     } finally {
       setLoading(false);
     }
@@ -144,7 +164,9 @@ export function SiteConfigurationPage() {
       setSettings(updated);
       toast.success("Configuration de la carte enregistrée.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Enregistrement impossible.",
+      );
     } finally {
       setSavingSettings(false);
     }
@@ -184,7 +206,10 @@ export function SiteConfigurationPage() {
           });
 
       if (editor.image) {
-        saved = await uploadFeaturedInstructorImageAction(saved.id, editor.image);
+        saved = await uploadFeaturedInstructorImageAction(
+          saved.id,
+          editor.image,
+        );
       }
 
       setEntries((current) => {
@@ -207,7 +232,9 @@ export function SiteConfigurationPage() {
           : "Formateur ajouté à la landing.",
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Enregistrement impossible.",
+      );
     } finally {
       setEditorSaving(false);
     }
@@ -223,7 +250,9 @@ export function SiteConfigurationPage() {
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Modification impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Modification impossible.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -240,7 +269,61 @@ export function SiteConfigurationPage() {
       );
       toast.success("La photo du profil sera utilisée.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Modification impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Modification impossible.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function openEntryCrop(entry: AdminFeaturedInstructor) {
+    const imageUrl =
+      entry.imageMode === "CUSTOM"
+        ? entry.customImageUrl
+        : entry.profileImageUrl;
+    if (!imageUrl) {
+      toast.error("Ce formateur n’a pas encore de photo à repositionner.");
+      return;
+    }
+    setCropRequest({
+      kind: "entry",
+      entry,
+      source: getCropSourceUrl(imageUrl),
+    });
+  }
+
+  function closeCropDialog() {
+    setCropRequest((current) => {
+      if (current?.kind === "editor") URL.revokeObjectURL(current.source);
+      return null;
+    });
+  }
+
+  async function saveCrop(blob: Blob) {
+    if (!cropRequest) return;
+    const file = new File([blob], "portrait-landing.webp", {
+      type: "image/webp",
+    });
+    if (cropRequest.kind === "editor") {
+      setEditor((current) => (current ? { ...current, image: file } : current));
+      return;
+    }
+
+    const entry = cropRequest.entry;
+    setBusyId(entry.id);
+    try {
+      const updated = await uploadFeaturedInstructorImageAction(entry.id, file);
+      setEntries((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      toast.success("Le cadrage de la photo a été enregistré.");
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Impossible d’enregistrer le cadrage de cette photo.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -255,10 +338,14 @@ export function SiteConfigurationPage() {
     setEntries(next);
     setBusyId(entries[index].id);
     try {
-      setEntries(await reorderFeaturedInstructorsAction(next.map((item) => item.id)));
+      setEntries(
+        await reorderFeaturedInstructorsAction(next.map((item) => item.id)),
+      );
     } catch (error) {
       setEntries(previous);
-      toast.error(error instanceof Error ? error.message : "Réorganisation impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Réorganisation impossible.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -281,7 +368,9 @@ export function SiteConfigurationPage() {
       );
       toast.success("Formateur retiré de la landing.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Suppression impossible.");
+      toast.error(
+        error instanceof Error ? error.message : "Suppression impossible.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -296,7 +385,8 @@ export function SiteConfigurationPage() {
           Configurations du site
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Pilotez les contenus publics de Certilys sans modifier le code de la landing.
+          Pilotez les contenus publics de Certilys sans modifier le code de la
+          landing.
         </p>
       </div>
 
@@ -326,10 +416,14 @@ export function SiteConfigurationPage() {
                 <CardHeader className="border-b">
                   <CardTitle>Contenu de la carte</CardTitle>
                   <CardDescription>
-                    Ces textes sont affichés sous l’animation des profils vérifiés.
+                    Ces textes sont affichés sous l’animation des profils
+                    vérifiés.
                   </CardDescription>
                   <CardAction className="flex items-center gap-2">
-                    <Label htmlFor="verified-section-enabled" className="text-xs">
+                    <Label
+                      htmlFor="verified-section-enabled"
+                      className="text-xs"
+                    >
                       Visible
                     </Label>
                     <Switch
@@ -352,7 +446,10 @@ export function SiteConfigurationPage() {
                         value={settings.title}
                         maxLength={80}
                         onChange={(event) =>
-                          setSettings({ ...settings, title: event.target.value })
+                          setSettings({
+                            ...settings,
+                            title: event.target.value,
+                          })
                         }
                       />
                     </div>
@@ -380,9 +477,15 @@ export function SiteConfigurationPage() {
                       className="gap-2"
                     >
                       {savingSettings ? (
-                        <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+                        <HugeiconsIcon
+                          icon={Loading02Icon}
+                          className="size-4 animate-spin"
+                        />
                       ) : (
-                        <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+                        <HugeiconsIcon
+                          icon={Settings02Icon}
+                          className="size-4"
+                        />
                       )}
                       Enregistrer
                     </Button>
@@ -396,7 +499,10 @@ export function SiteConfigurationPage() {
                       <p className="flex items-center gap-2 font-sora text-xl font-semibold">
                         {settings.title || "Formateurs vérifiés"}
                         <span className="inline-flex size-6 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                          <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-4" />
+                          <HugeiconsIcon
+                            icon={CheckmarkBadge01Icon}
+                            className="size-4"
+                          />
                         </span>
                       </p>
                       <p className="mt-2 text-sm leading-6 text-secondary-foreground/75">
@@ -411,14 +517,17 @@ export function SiteConfigurationPage() {
                 <CardHeader className="border-b">
                   <CardTitle>Formateurs mis en avant</CardTitle>
                   <CardDescription>
-                    Jusqu’à huit profils actifs, affichés dans l’ordre ci-dessous.
+                    Jusqu’à huit profils actifs, affichés dans l’ordre
+                    ci-dessous.
                   </CardDescription>
                   <CardAction>
                     <Button
                       size="sm"
                       className="gap-2"
                       onClick={() => openEditor()}
-                      disabled={entries.filter((entry) => entry.isActive).length >= 8}
+                      disabled={
+                        entries.filter((entry) => entry.isActive).length >= 8
+                      }
                     >
                       <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
                       Ajouter
@@ -428,9 +537,12 @@ export function SiteConfigurationPage() {
                 <CardContent className="space-y-3">
                   {entries.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center">
-                      <p className="font-medium text-foreground">Aucun formateur configuré</p>
+                      <p className="font-medium text-foreground">
+                        Aucun formateur configuré
+                      </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        La landing affichera son état générique jusqu’à votre première sélection.
+                        La landing affichera son état générique jusqu’à votre
+                        première sélection.
                       </p>
                     </div>
                   ) : (
@@ -446,18 +558,26 @@ export function SiteConfigurationPage() {
                         >
                           <div className="flex min-w-0 flex-1 items-center gap-3">
                             <Avatar className="size-12">
-                              {imageUrl ? <AvatarImage src={imageUrl} alt="" /> : null}
-                              <AvatarFallback>{initials(entry.displayName)}</AvatarFallback>
+                              {imageUrl ? (
+                                <AvatarImage src={imageUrl} alt="" />
+                              ) : null}
+                              <AvatarFallback>
+                                {initials(entry.displayName)}
+                              </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
                               <p className="truncate font-medium text-foreground">
                                 {entry.displayNameOverride || entry.displayName}
                               </p>
                               <p className="truncate text-xs text-muted-foreground">
-                                {entry.expertiseOverride || entry.profileExpertise}
+                                {entry.expertiseOverride ||
+                                  entry.profileExpertise}
                               </p>
                               <div className="mt-1 flex flex-wrap gap-1.5">
-                                <Badge variant="outline" className="font-normal">
+                                <Badge
+                                  variant="outline"
+                                  className="font-normal"
+                                >
                                   {entry.imageMode === "CUSTOM"
                                     ? "Image personnalisée"
                                     : "Photo du profil"}
@@ -469,7 +589,7 @@ export function SiteConfigurationPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between gap-2 md:justify-end">
+                          <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
@@ -478,16 +598,25 @@ export function SiteConfigurationPage() {
                                 disabled={index === 0 || Boolean(busyId)}
                                 onClick={() => void moveEntry(index, -1)}
                               >
-                                <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
+                                <HugeiconsIcon
+                                  icon={ArrowUp01Icon}
+                                  className="size-4"
+                                />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
                                 aria-label="Descendre le formateur"
-                                disabled={index === entries.length - 1 || Boolean(busyId)}
+                                disabled={
+                                  index === entries.length - 1 ||
+                                  Boolean(busyId)
+                                }
                                 onClick={() => void moveEntry(index, 1)}
                               >
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+                                <HugeiconsIcon
+                                  icon={ArrowDown01Icon}
+                                  className="size-4"
+                                />
                               </Button>
                             </div>
                             {entry.imageMode === "CUSTOM" ? (
@@ -498,6 +627,16 @@ export function SiteConfigurationPage() {
                                 onClick={() => void switchToProfileImage(entry)}
                               >
                                 Utiliser le profil
+                              </Button>
+                            ) : null}
+                            {imageUrl ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busyId === entry.id}
+                                onClick={() => openEntryCrop(entry)}
+                              >
+                                Repositionner la photo
                               </Button>
                             ) : null}
                             <Switch
@@ -514,7 +653,10 @@ export function SiteConfigurationPage() {
                               aria-label={`Modifier ${entry.displayName}`}
                               onClick={() => openEditor(entry)}
                             >
-                              <HugeiconsIcon icon={Edit02Icon} className="size-4" />
+                              <HugeiconsIcon
+                                icon={Edit02Icon}
+                                className="size-4"
+                              />
                             </Button>
                             <Button
                               variant="ghost"
@@ -523,7 +665,10 @@ export function SiteConfigurationPage() {
                               aria-label={`Retirer ${entry.displayName}`}
                               onClick={() => setDeleteTarget(entry)}
                             >
-                              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                              <HugeiconsIcon
+                                icon={Delete02Icon}
+                                className="size-4"
+                              />
                             </Button>
                           </div>
                         </div>
@@ -541,24 +686,32 @@ export function SiteConfigurationPage() {
             <CardHeader className="border-b">
               <CardTitle>Domaines d’expertise</CardTitle>
               <CardDescription>
-                Gérez les choix proposés aux formateurs pendant leur onboarding et dans leur profil.
+                Gérez les choix proposés aux formateurs pendant leur onboarding
+                et dans leur profil.
               </CardDescription>
               <CardAction>
-                <Button variant="outline" onClick={() => setExpertiseOpen(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setExpertiseOpen(true)}
+                >
                   Gérer les domaines
                 </Button>
               </CardAction>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Les renommages sont répercutés sur les spécialités principales existantes. Un domaine utilisé ne peut pas être supprimé.
+                Les renommages sont répercutés sur les spécialités principales
+                existantes. Un domaine utilisé ne peut pas être supprimé.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <ExpertiseDomainsDialog open={expertiseOpen} onOpenChange={setExpertiseOpen} />
+      <ExpertiseDomainsDialog
+        open={expertiseOpen}
+        onOpenChange={setExpertiseOpen}
+      />
 
       <AppDialog
         open={Boolean(editor)}
@@ -566,11 +719,17 @@ export function SiteConfigurationPage() {
           if (!open && !editorSaving) setEditor(null);
         }}
         size="lg"
-        title={editor?.entry ? "Modifier la présentation" : "Ajouter un formateur"}
+        title={
+          editor?.entry ? "Modifier la présentation" : "Ajouter un formateur"
+        }
         description="Les textes saisis ici restent propres à la landing et ne modifient pas le profil officiel."
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditor(null)} disabled={editorSaving}>
+            <Button
+              variant="outline"
+              onClick={() => setEditor(null)}
+              disabled={editorSaving}
+            >
               Annuler
             </Button>
             <Button
@@ -579,7 +738,10 @@ export function SiteConfigurationPage() {
               className="gap-2"
             >
               {editorSaving ? (
-                <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+                <HugeiconsIcon
+                  icon={Loading02Icon}
+                  className="size-4 animate-spin"
+                />
               ) : null}
               Enregistrer
             </Button>
@@ -609,7 +771,9 @@ export function SiteConfigurationPage() {
                         type="button"
                         onClick={() =>
                           setEditor((current) =>
-                            current ? { ...current, instructorId: candidate.id } : current,
+                            current
+                              ? { ...current, instructorId: candidate.id }
+                              : current,
                           )
                         }
                         className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
@@ -622,7 +786,9 @@ export function SiteConfigurationPage() {
                           {candidate.photoUrl ? (
                             <AvatarImage src={candidate.photoUrl} alt="" />
                           ) : null}
-                          <AvatarFallback>{initials(candidate.displayName)}</AvatarFallback>
+                          <AvatarFallback>
+                            {initials(candidate.displayName)}
+                          </AvatarFallback>
                         </Avatar>
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-medium">
@@ -641,46 +807,63 @@ export function SiteConfigurationPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="featured-name">Nom affiché — facultatif</Label>
+                <Label htmlFor="featured-name">Nom affiché, facultatif</Label>
                 <Input
                   id="featured-name"
                   value={editor.displayNameOverride}
                   maxLength={120}
                   placeholder={editor.entry?.displayName ?? "Nom du profil"}
                   onChange={(event) =>
-                    setEditor({ ...editor, displayNameOverride: event.target.value })
+                    setEditor({
+                      ...editor,
+                      displayNameOverride: event.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="featured-expertise">Expertise affichée — facultatif</Label>
+                <Label htmlFor="featured-expertise">
+                  Expertise affichée, facultative
+                </Label>
                 <Input
                   id="featured-expertise"
                   value={editor.expertiseOverride}
                   maxLength={160}
-                  placeholder={editor.entry?.profileExpertise ?? "Expertise du profil"}
+                  placeholder={
+                    editor.entry?.profileExpertise ?? "Expertise du profil"
+                  }
                   onChange={(event) =>
-                    setEditor({ ...editor, expertiseOverride: event.target.value })
+                    setEditor({
+                      ...editor,
+                      expertiseOverride: event.target.value,
+                    })
                   }
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="featured-alt">Description accessible de l’image</Label>
+              <Label htmlFor="featured-alt">
+                Description accessible de l’image
+              </Label>
               <Input
                 id="featured-alt"
                 value={editor.imageAlt}
                 maxLength={180}
                 placeholder="Ex. : Portrait de la formatrice Awa Diop"
-                onChange={(event) => setEditor({ ...editor, imageAlt: event.target.value })}
+                onChange={(event) =>
+                  setEditor({ ...editor, imageAlt: event.target.value })
+                }
               />
             </div>
 
             <div className="rounded-xl border border-dashed border-border p-4">
-              <Label htmlFor="featured-image" className="flex items-center gap-2">
+              <Label
+                htmlFor="featured-image"
+                className="flex items-center gap-2"
+              >
                 <HugeiconsIcon icon={ImageUpload01Icon} className="size-4" />
-                Image personnalisée — facultatif
+                Image personnalisée, facultative
               </Label>
               <Input
                 id="featured-image"
@@ -689,21 +872,51 @@ export function SiteConfigurationPage() {
                 className="mt-3 h-auto py-2"
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
-                  if (file && file.size > 5 * 1024 * 1024) {
-                    toast.error("L’image ne doit pas dépasser 5 Mo.");
-                    event.target.value = "";
+                  event.target.value = "";
+                  if (!file) return;
+                  const validation = imageUploadSchema.safeParse(file);
+                  if (!validation.success) {
+                    toast.error(
+                      validation.error.issues[0]?.message ??
+                        "L’image sélectionnée n’est pas valide.",
+                    );
                     return;
                   }
-                  setEditor({ ...editor, image: file });
+                  setCropRequest({
+                    kind: "editor",
+                    source: URL.createObjectURL(file),
+                    fileName: file.name,
+                  });
                 }}
               />
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                JPEG, PNG ou WebP, 5 Mo maximum. L’image sera automatiquement recadrée et normalisée en carré 768 × 768.
+                JPEG, PNG ou WebP, 5 Mo maximum. Vous pourrez ajuster le cadrage
+                avant l’enregistrement.
               </p>
+              {editor.image ? (
+                <p className="mt-2 text-xs font-medium text-primary">
+                  Le cadrage personnalisé est prêt à être enregistré.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}
       </AppDialog>
+
+      <ImageCropDialog
+        open={Boolean(cropRequest)}
+        imageSrc={cropRequest?.source ?? null}
+        title={
+          cropRequest?.kind === "entry"
+            ? `Repositionner la photo de ${cropRequest.entry.displayName}`
+            : "Recadrer l’image personnalisée"
+        }
+        description="Le cercle correspond au portrait affiché sur la landing. La photo de profil publique ne sera jamais modifiée."
+        onOpenChange={(open) => {
+          if (!open) closeCropDialog();
+        }}
+        onConfirm={saveCrop}
+      />
 
       <AlertDialog
         open={Boolean(deleteTarget)}
@@ -713,14 +926,20 @@ export function SiteConfigurationPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Retirer ce formateur de la landing ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Retirer ce formateur de la landing ?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Le compte et le profil de {deleteTarget?.displayName} ne seront pas supprimés.
+              Le compte et le profil de {deleteTarget?.displayName} ne seront
+              pas supprimés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()}>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+            >
               Retirer
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -737,4 +956,22 @@ function initials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function getCropSourceUrl(imageUrl: string) {
+  if (imageUrl.startsWith("blob:") || imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+  try {
+    const { props } = getImageProps({
+      src: imageUrl,
+      alt: "",
+      width: 1024,
+      height: 1024,
+      quality: 90,
+    });
+    return typeof props.src === "string" ? props.src : imageUrl;
+  } catch {
+    return imageUrl;
+  }
 }
