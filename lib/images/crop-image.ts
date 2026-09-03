@@ -1,5 +1,7 @@
 import type { Area } from "react-easy-crop";
 
+const MIN_SOURCE_CROP_SIDE = 128;
+
 export async function cropImageToWebp(
   source: string,
   crop: Area,
@@ -7,6 +9,19 @@ export async function cropImageToWebp(
   outputSize = 1024,
 ) {
   const image = await loadImage(source);
+
+  // Do not hide a tiny source behind a large canvas. The backend has the same
+  // 128 px floor and remains the final authority, but failing here avoids
+  // pointless upscaling and gives the admin immediate feedback.
+  if (
+    Math.floor(crop.width) < MIN_SOURCE_CROP_SIDE ||
+    Math.floor(crop.height) < MIN_SOURCE_CROP_SIDE
+  ) {
+    throw new Error(
+      "La zone recadrée est trop petite. Réduisez le zoom ou choisissez une image d’au moins 128 × 128 pixels.",
+    );
+  }
+
   const radians = (rotation * Math.PI) / 180;
   const rotatedWidth =
     Math.abs(Math.cos(radians) * image.width) +
