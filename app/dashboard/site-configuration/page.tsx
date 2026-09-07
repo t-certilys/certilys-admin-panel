@@ -1,5 +1,5 @@
-import { SiteConfigurationPage } from "@/components/certilys-ui/site-configuration/site-configuration-page";
+import { SiteConfigurationHub } from "@/components/certilys-ui/site-configuration/site-configuration-hub";
 
 export default function Page() {
-  return <SiteConfigurationPage />;
+  return <SiteConfigurationHub />;
 }
