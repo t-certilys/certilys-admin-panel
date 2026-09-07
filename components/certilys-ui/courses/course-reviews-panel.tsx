@@ -135,9 +135,49 @@ export function CourseReviewsPanel({ courseId }: { courseId: string }) {
       if (!window.confirm("Quitter sans enregistrer le motif de modération ?")) event.preventDefault();
     };
     navigation?.addEventListener("navigate", navigate);
+    if (navigation) {
+      return () => {
+        window.removeEventListener("beforeunload", beforeUnload);
+        navigation.removeEventListener("navigate", navigate);
+      };
+    }
+
+    const guardUrl = window.location.href;
+    let sentinelActive = true;
+    let cleaningUp = false;
+    window.history.pushState(
+      { ...(window.history.state ?? {}), __unsavedChangesGuard: true },
+      "",
+      guardUrl,
+    );
+    const handlePopState = (event: PopStateEvent) => {
+      if (cleaningUp) {
+        cleaningUp = false;
+        sentinelActive = false;
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (!sentinelActive) return;
+      if (window.confirm("Quitter sans enregistrer le motif de modération ?")) {
+        sentinelActive = false;
+        return;
+      }
+      event.stopImmediatePropagation();
+      window.history.pushState(
+        { ...(window.history.state ?? {}), __unsavedChangesGuard: true },
+        "",
+        guardUrl,
+      );
+    };
+    window.addEventListener("popstate", handlePopState, true);
+
     return () => {
       window.removeEventListener("beforeunload", beforeUnload);
-      navigation?.removeEventListener("navigate", navigate);
+      window.removeEventListener("popstate", handlePopState, true);
+      if (sentinelActive) {
+        cleaningUp = true;
+        window.history.back();
+      }
     };
   }, [moderation, form.formState.isDirty]);
 
