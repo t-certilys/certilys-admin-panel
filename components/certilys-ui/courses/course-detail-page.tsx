@@ -36,14 +36,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { CoursePendingRevisionCard } from "@/components/certilys-ui/courses/course-pending-revision-card";
 import {
   approveAdminCourseAction,
   archiveAdminCourseAction,
   restoreAdminCourseAction,
   deleteAdminCourseAction,
-  getAdminCourseAction,
+  getAdminCourseWithRevisionAction,
   rejectAdminCourseAction,
   requestAdminCourseChangesAction,
+  type AdminCoursePendingRevision,
 } from "@/lib/admin-courses-actions";
 
 import {
@@ -278,17 +280,21 @@ export default function CourseDetailPage() {
     null,
   );
   const [loadError, setLoadError] = React.useState(false);
+  const [pendingRevision, setPendingRevision] =
+    React.useState<AdminCoursePendingRevision | null>(null);
+  const [reloadToken, setReloadToken] = React.useState(0);
 
   React.useEffect(() => {
     let mounted = true;
     setCourse(null);
     setLoadError(false);
 
-    getAdminCourseAction(id)
+    getAdminCourseWithRevisionAction(id)
       .then((found) => {
         if (!mounted) return;
         if (found) {
-          setCourse(found);
+          setCourse(found.course);
+          setPendingRevision(found.pendingRevision);
         } else {
           setLoadError(true);
         }
@@ -301,7 +307,7 @@ export default function CourseDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, reloadToken]);
 
   // Dialog action
   const [dialog, setDialog] = React.useState<ActionDialogState>({
@@ -649,6 +655,14 @@ export default function CourseDetailPage() {
           </div>
         </div>
       )}
+
+      {pendingRevision ? (
+        <CoursePendingRevisionCard
+          courseId={course.id}
+          revision={pendingRevision}
+          onReviewed={() => setReloadToken((token) => token + 1)}
+        />
+      ) : null}
 
       {/* ══════════════════════════════════════════════════════════════════════
           1. RÉSUMÉ

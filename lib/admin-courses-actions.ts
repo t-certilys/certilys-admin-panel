@@ -69,6 +69,28 @@ type BackendCourse = {
   }>;
 };
 
+/** Mise a jour en attente sur une formation deja en ligne. */
+export type AdminCourseRevisionEntry = {
+  code: string;
+  change: "ADDED" | "UPDATED" | "REMOVED";
+  severity: "MINOR" | "CONTENT";
+  label: string;
+  detail: string;
+  meta: string;
+};
+
+export type AdminCoursePendingRevision = {
+  id: string;
+  status: "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "REJECTED";
+  changeKind: "MINOR" | "CONTENT";
+  entries: AdminCourseRevisionEntry[];
+  notifyLearners: boolean;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  updatedAt: string;
+};
+
 type BackendCourseLesson = {
   id: string;
   title: string;
@@ -114,17 +136,69 @@ export async function getAdminCoursesAction(
 export async function getAdminCourseAction(
   id: string,
 ): Promise<AdminCourseSubmission | null> {
+  const result = await getAdminCourseWithRevisionAction(id);
+  return result?.course ?? null;
+}
+
+/**
+ * Charge la formation et, le cas echeant, la mise a jour que le formateur a
+ * envoyee en validation sans toucher a la version en ligne.
+ */
+export async function getAdminCourseWithRevisionAction(id: string): Promise<{
+  course: AdminCourseSubmission;
+  pendingRevision: AdminCoursePendingRevision | null;
+} | null> {
   try {
-    const response = await adminGet<CourseResponse>(
-      `/admin/courses/${encodeURIComponent(id)}`,
-    );
-    return mapCourse(response.course);
+    const response = await adminGet<
+      CourseResponse & { pendingRevision?: AdminCoursePendingRevision | null }
+    >(`/admin/courses/${encodeURIComponent(id)}`);
+    return {
+      course: mapCourse(response.course),
+      pendingRevision: response.pendingRevision ?? null,
+    };
   } catch (error) {
     if (error instanceof AdminApiError && error.status === 404) {
       return null;
     }
     throw error;
   }
+}
+
+export async function approveAdminCourseRevisionAction(
+  courseId: string,
+  revisionId: string,
+  notes?: string,
+): Promise<AdminCourseSubmission> {
+  const trimmedNotes = notes?.trim();
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(courseId)}/revisions/${encodeURIComponent(revisionId)}/approve`,
+    trimmedNotes ? { notes: trimmedNotes } : {},
+  );
+  return mapCourse(response.course);
+}
+
+export async function requestAdminCourseRevisionChangesAction(
+  courseId: string,
+  revisionId: string,
+  reason: string,
+): Promise<AdminCourseSubmission> {
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(courseId)}/revisions/${encodeURIComponent(revisionId)}/request-changes`,
+    { reason: reason.trim() },
+  );
+  return mapCourse(response.course);
+}
+
+export async function rejectAdminCourseRevisionAction(
+  courseId: string,
+  revisionId: string,
+  reason: string,
+): Promise<AdminCourseSubmission> {
+  const response = await adminMutation<CourseResponse>(
+    `/admin/courses/${encodeURIComponent(courseId)}/revisions/${encodeURIComponent(revisionId)}/reject`,
+    { reason: reason.trim() },
+  );
+  return mapCourse(response.course);
 }
 
 export async function approveAdminCourseAction(
