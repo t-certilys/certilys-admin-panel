@@ -62,6 +62,11 @@ type BackendCourse = {
   reviewedAt?: string | null;
   reviewNotes?: string | null;
   rejectionReason?: string | null;
+  pendingRevision?: {
+    id: string;
+    changeKind: "MINOR" | "CONTENT";
+    submittedAt: string | null;
+  } | null;
   modules: Array<{
     id: string;
     title: string;
@@ -310,6 +315,9 @@ function mapCourse(course: BackendCourse): AdminCourseSubmission {
       (sum, lesson) => sum + lesson.durationMinutes,
       0,
     ),
+    pendingRevisionSubmittedAt: course.pendingRevision
+      ? (course.pendingRevision.submittedAt ?? course.submittedAt ?? null)
+      : null,
   };
 }
 

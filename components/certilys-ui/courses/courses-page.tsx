@@ -171,6 +171,11 @@ function StatusBadge({ status }: { status: CourseSubmissionStatus }) {
   );
 }
 
+/** Une formation attend une décision : première soumission ou mise à jour. */
+function isAwaitingReview(course: AdminCourseSubmission) {
+  return course.status === "SUBMITTED" || Boolean(course.pendingRevisionSubmittedAt);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // KPI compacts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,7 +192,7 @@ function CourseKpiCards({ data }: { data: AdminCourseSubmission[] }) {
     {
       id: "submitted",
       label: "Soumises",
-      value: data.filter((course) => course.status === "SUBMITTED").length,
+      value: data.filter(isAwaitingReview).length,
       colorClass: "text-amber-600 border-amber-500/40 bg-amber-500/10",
       iconBg: "bg-amber-500/15",
     },
@@ -536,8 +541,13 @@ export default function CoursesPage() {
         return false;
       }
 
-      // Statut
-      if (filterValues.status && item.status !== filterValues.status) {
+      // Statut. « Soumise » inclut les mises à jour de formations en ligne,
+      // qui attendent elles aussi une décision.
+      if (
+        filterValues.status &&
+        item.status !== filterValues.status &&
+        !(filterValues.status === "SUBMITTED" && isAwaitingReview(item))
+      ) {
         return false;
       }
 
@@ -976,12 +986,30 @@ export default function CoursesPage() {
 
                   {/* Statut */}
                   <TableCell>
-                    <StatusBadge status={course.status} />
+                    <div className="flex flex-col items-start gap-1">
+                      <StatusBadge status={course.status} />
+                      {course.pendingRevisionSubmittedAt ? (
+                        <Link
+                          href={`/dashboard/courses/${course.id}`}
+                          className="rounded"
+                        >
+                          <Badge
+                            variant="outline"
+                            className="gap-1.5 border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-500/20"
+                          >
+                            <span className="size-1.5 shrink-0 rounded-full bg-amber-500" />
+                            Mise à jour à valider
+                          </Badge>
+                        </Link>
+                      ) : null}
+                    </div>
                   </TableCell>
 
                   {/* Date soumission */}
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(course.submittedAt)}
+                    {formatDate(
+                      course.pendingRevisionSubmittedAt ?? course.submittedAt,
+                    )}
                   </TableCell>
 
                   {/* Actions */}

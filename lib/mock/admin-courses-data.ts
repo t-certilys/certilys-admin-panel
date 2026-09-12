@@ -93,6 +93,12 @@ export interface AdminCourseSubmission {
   totalLessons: number;
   /** Durée totale estimée en minutes */
   totalDurationMinutes: number;
+  /**
+   * Mise à jour d'une formation déjà en ligne, en attente d'examen. Le
+   * statut du cours ne bouge pas pendant ce temps : sans ce champ, rien ne
+   * signalerait qu'une décision est attendue.
+   */
+  pendingRevisionSubmittedAt?: string | null;
 }
 
 export interface CourseReviewKpi {
