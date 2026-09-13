@@ -17,6 +17,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
+import { clearReviewCorrectionDrafts } from "@/lib/courses/use-review-corrections-draft"
 import { logoutAdminAction } from "@/lib/auth-actions"
 import { settingsNavMain, backToDashboard } from "../../../lib/settings-nav-config"
 
@@ -31,6 +32,7 @@ export function SettingsBottomDrawer({ open, onClose }: SettingsBottomDrawerProp
 
   async function handleLogout() {
     onClose()
+    clearReviewCorrectionDrafts()
     await logoutAdminAction()
     router.replace("/auth/login")
     router.refresh()

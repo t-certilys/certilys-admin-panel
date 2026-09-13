@@ -1,10 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  CheckmarkSquare01Icon,
+  Alert02Icon,
+  ArrowDown01Icon,
   Cancel01Icon,
+  CheckmarkSquare01Icon,
+  EyeIcon,
   MessageLock01Icon,
   Notification01Icon,
   RefreshIcon,
@@ -13,57 +17,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 import {
-  approveAdminCourseRevisionAction,
-  rejectAdminCourseRevisionAction,
-  requestAdminCourseRevisionChangesAction,
-  type AdminCoursePendingRevision,
-} from "@/lib/admin-courses-actions";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import type {
+  AdminCoursePendingRevision,
+  AdminCourseRevisionEntry,
+} from "@/lib/courses/course-review.types";
+import { formatDate } from "@/lib/mock/admin-courses-data";
 
-type RevisionDecision = "approve" | "request-changes" | "reject";
-
-const decisions: Record<
-  RevisionDecision,
-  {
-    title: string;
-    description: string;
-    confirmLabel: string;
-    requireReason: boolean;
-    tone: "success" | "warning" | "danger";
-  }
-> = {
-  approve: {
-    title: "Publier la mise à jour",
-    description:
-      "Le nouveau contenu remplace la version en ligne. La progression des apprenants déjà inscrits est conservée.",
-    confirmLabel: "Publier la mise à jour",
-    requireReason: false,
-    tone: "success",
-  },
-  "request-changes": {
-    title: "Demander des corrections",
-    description:
-      "La mise à jour retourne au formateur. La version actuellement en ligne reste inchangée.",
-    confirmLabel: "Demander des corrections",
-    requireReason: true,
-    tone: "warning",
-  },
-  reject: {
-    title: "Refuser la mise à jour",
-    description:
-      "La mise à jour est abandonnée. La version actuellement en ligne reste inchangée.",
-    confirmLabel: "Refuser la mise à jour",
-    requireReason: true,
-    tone: "danger",
-  },
-};
-
-const changeMarks = {
-  ADDED: { symbol: "+", className: "bg-emerald-500/10 text-emerald-700" },
-  REMOVED: { symbol: "−", className: "bg-destructive/10 text-destructive" },
-  UPDATED: { symbol: "~", className: "bg-primary/10 text-primary" },
-} as const;
+import { ChangeMark, ValueBox } from "./review/review-ui";
+import { useReviewDecisionFlow } from "./review/use-review-decision-flow";
 
 interface CoursePendingRevisionCardProps {
   courseId: string;
@@ -83,58 +49,31 @@ export function CoursePendingRevisionCard({
   revision,
   onReviewed,
 }: CoursePendingRevisionCardProps) {
-  const [decision, setDecision] = React.useState<RevisionDecision | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const { openDecision, dialog, draft } = useReviewDecisionFlow({
+    courseId,
+    revisionId: revision.id,
+    onDone: onReviewed,
+  });
 
   if (revision.status !== "SUBMITTED") return null;
 
-  const config = decision ? decisions[decision] : null;
-
-  async function handleConfirm({ reason }: { reason: string }) {
-    if (!decision) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (decision === "approve") {
-        await approveAdminCourseRevisionAction(courseId, revision.id, reason);
-      } else if (decision === "request-changes") {
-        await requestAdminCourseRevisionChangesAction(
-          courseId,
-          revision.id,
-          reason,
-        );
-      } else {
-        await rejectAdminCourseRevisionAction(courseId, revision.id, reason);
-      }
-
-      setDecision(null);
-      onReviewed();
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "La décision n’a pas pu être enregistrée.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+  const previewHref = `/dashboard/courses/${courseId}/preview?version=revision`;
 
   return (
     <Card className="border-primary/40 shadow-none">
-      <CardHeader className="pb-3">
+      <CardHeader className="gap-3 pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
           <HugeiconsIcon icon={RefreshIcon} className="size-4 text-primary" />
           Mise à jour en attente
-          <Badge
-            variant="outline"
-            className="gap-1.5 px-2.5 py-1 text-xs font-medium"
-          >
+          <Badge variant="outline" className="px-2.5 py-1 text-xs font-medium">
             {revision.entries.length > 1
               ? `${revision.entries.length} modifications`
               : "1 modification"}
+          </Badge>
+          <Badge variant="outline" className="px-2.5 py-1 text-xs font-medium">
+            {revision.changeKind === "CONTENT"
+              ? "Changement de contenu"
+              : "Modifications mineures"}
           </Badge>
           {revision.notifyLearners ? (
             <Badge
@@ -146,47 +85,39 @@ export function CoursePendingRevisionCard({
             </Badge>
           ) : null}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Envoyée le {formatDate(revision.submittedAt)}. La formation reste en
+          ligne et vendable pendant l’examen.
+        </p>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-xs text-muted-foreground">
-          La formation reste en ligne et vendable pendant l’examen. Publier
-          remplace son contenu par la version ci-dessous.
-        </p>
+        {revision.liveChangedSinceSubmission ? (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+            <HugeiconsIcon icon={Alert02Icon} className="mt-0.5 size-4 shrink-0" />
+            La version en ligne a changé depuis l’envoi. Les différences
+            ci-dessous sont recalculées sur la version actuelle.
+          </div>
+        ) : null}
 
         <ul className="space-y-1.5">
-          {revision.entries.map((entry) => {
-            const mark = changeMarks[entry.change];
-
-            return (
-              <li
-                key={entry.code}
-                className="flex min-h-10 items-center gap-2.5 rounded-lg border border-border/60 px-3 py-2 text-sm"
-              >
-                <span
-                  aria-hidden
-                  className={`flex size-5 shrink-0 items-center justify-center rounded font-mono text-xs font-bold ${mark.className}`}
-                >
-                  {mark.symbol}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <strong className="font-semibold">{entry.label}</strong>
-                  {entry.detail ? ` · ${entry.detail}` : null}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {entry.meta}
-                </span>
-              </li>
-            );
-          })}
+          {revision.entries.map((entry) => (
+            <RevisionEntryRow
+              key={entry.code}
+              entry={entry}
+              previewHref={previewHref}
+            />
+          ))}
         </ul>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setDecision("approve")}
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm" variant="secondary" className="gap-2">
+            <Link href={previewHref}>
+              <HugeiconsIcon icon={EyeIcon} className="size-4" />
+              Examiner comme un apprenant
+            </Link>
+          </Button>
+          <Button type="button" size="sm" onClick={() => openDecision("approve")}>
             <HugeiconsIcon icon={CheckmarkSquare01Icon} className="size-4" />
             Publier la mise à jour
           </Button>
@@ -194,17 +125,22 @@ export function CoursePendingRevisionCard({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => setDecision("request-changes")}
+            onClick={() => openDecision("request-changes")}
           >
             <HugeiconsIcon icon={MessageLock01Icon} className="size-4" />
             Demander des corrections
+            {draft.items.length > 0 ? (
+              <Badge className="ml-0.5 h-5 min-w-5 px-1.5 text-[11px]">
+                {draft.items.length}
+              </Badge>
+            ) : null}
           </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="text-destructive"
-            onClick={() => setDecision("reject")}
+            onClick={() => openDecision("reject")}
           >
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
             Refuser
@@ -212,24 +148,78 @@ export function CoursePendingRevisionCard({
         </div>
       </CardContent>
 
-      {config ? (
-        <DecisionDialog
-          open
-          onOpenChange={(open) => {
-            if (!open && !loading) setDecision(null);
-          }}
-          title={config.title}
-          description={config.description}
-          tone={config.tone}
-          requireReason={config.requireReason}
-          reasonLabel="Motif communiqué au formateur"
-          reasonPlaceholder="Expliquez ce qui doit être corrigé…"
-          confirmLabel={config.confirmLabel}
-          loading={loading}
-          error={error}
-          onConfirm={handleConfirm}
-        />
-      ) : null}
+      {dialog}
     </Card>
+  );
+}
+
+function RevisionEntryRow({
+  entry,
+  previewHref,
+}: {
+  entry: AdminCourseRevisionEntry;
+  previewHref: string;
+}) {
+  const lessonHref =
+    entry.target?.type === "LESSON" && entry.target.id
+      ? `${previewHref}&lesson=${encodeURIComponent(entry.target.id)}`
+      : entry.target?.type === "MODULE"
+        ? `${previewHref}&changes=true`
+        : null;
+  const comparable =
+    entry.target?.type !== "LESSON" ||
+    (entry.target.field !== "video" && entry.target.field !== "resources");
+  const hasValues =
+    comparable && (entry.before != null || entry.after != null);
+
+  const content = (
+    <>
+      <ChangeMark change={entry.change} />
+      <span className="min-w-0 flex-1">
+        <strong className="font-semibold">{entry.label}</strong>
+        {entry.detail ? ` · ${entry.detail}` : null}
+      </span>
+      <span className="shrink-0 text-xs text-muted-foreground">{entry.meta}</span>
+    </>
+  );
+
+  if (hasValues) {
+    return (
+      <li className="rounded-lg border border-border/60 text-sm">
+        <Collapsible>
+          <CollapsibleTrigger className="group flex min-h-10 w-full items-center gap-2.5 px-3 py-2 text-left">
+            {content}
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="grid gap-2 px-3 pb-3 sm:grid-cols-2">
+            <ValueBox label="En ligne" value={entry.before} />
+            <ValueBox label="Proposé" value={entry.after} highlight />
+          </CollapsibleContent>
+        </Collapsible>
+      </li>
+    );
+  }
+
+  if (lessonHref) {
+    return (
+      <li>
+        <Link
+          href={lessonHref}
+          className="flex min-h-10 items-center gap-2.5 rounded-lg border border-border/60 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+        >
+          {content}
+          <HugeiconsIcon icon={EyeIcon} className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex min-h-10 items-center gap-2.5 rounded-lg border border-border/60 px-3 py-2 text-sm">
+      {content}
+    </li>
   );
 }

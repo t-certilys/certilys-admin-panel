@@ -1,11 +1,26 @@
 "use server";
 
 import { adminDelete, adminGet, adminMutation, AdminApiError } from "@/lib/admin-api";
+import type { ReviewDecisionPayload } from "@/lib/courses/course-review-decision.schema";
+import type {
+  AdminCourseDraftRevision,
+  AdminCoursePendingRevision,
+  AdminCoursePreview,
+  AdminReviewFeedback,
+  PreviewVersion,
+} from "@/lib/courses/course-review.types";
 import type {
   AdminCourseSubmission,
   CourseAssetType,
   CourseSubmissionStatus,
 } from "@/lib/mock/admin-courses-data";
+
+export type {
+  AdminCourseDraftRevision,
+  AdminCoursePendingRevision,
+  AdminCourseRevisionEntry,
+  AdminReviewFeedback,
+} from "@/lib/courses/course-review.types";
 
 type BackendCourseStatus =
   | "DRAFT"
@@ -74,28 +89,6 @@ type BackendCourse = {
   }>;
 };
 
-/** Mise a jour en attente sur une formation deja en ligne. */
-export type AdminCourseRevisionEntry = {
-  code: string;
-  change: "ADDED" | "UPDATED" | "REMOVED";
-  severity: "MINOR" | "CONTENT";
-  label: string;
-  detail: string;
-  meta: string;
-};
-
-export type AdminCoursePendingRevision = {
-  id: string;
-  status: "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "REJECTED";
-  changeKind: "MINOR" | "CONTENT";
-  entries: AdminCourseRevisionEntry[];
-  notifyLearners: boolean;
-  submittedAt: string | null;
-  reviewedAt: string | null;
-  reviewNotes: string | null;
-  updatedAt: string;
-};
-
 type BackendCourseLesson = {
   id: string;
   title: string;
@@ -146,21 +139,49 @@ export async function getAdminCourseAction(
 }
 
 /**
- * Charge la formation et, le cas echeant, la mise a jour que le formateur a
- * envoyee en validation sans toucher a la version en ligne.
+ * Charge le dossier : la formation, la mise a jour envoyee en validation,
+ * le brouillon eventuel du formateur et l'historique des decisions.
  */
 export async function getAdminCourseWithRevisionAction(id: string): Promise<{
   course: AdminCourseSubmission;
   pendingRevision: AdminCoursePendingRevision | null;
+  draftRevision: AdminCourseDraftRevision | null;
+  reviewFeedbacks: AdminReviewFeedback[];
 } | null> {
   try {
     const response = await adminGet<
-      CourseResponse & { pendingRevision?: AdminCoursePendingRevision | null }
+      CourseResponse & {
+        pendingRevision?: AdminCoursePendingRevision | null;
+        draftRevision?: AdminCourseDraftRevision | null;
+        reviewFeedbacks?: AdminReviewFeedback[];
+      }
     >(`/admin/courses/${encodeURIComponent(id)}`);
     return {
       course: mapCourse(response.course),
       pendingRevision: response.pendingRevision ?? null,
+      draftRevision: response.draftRevision ?? null,
+      reviewFeedbacks: response.reviewFeedbacks ?? [],
     };
+  } catch (error) {
+    if (error instanceof AdminApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Formation telle qu'un apprenant la verrait, en ligne ou dans la version
+ * proposee par une mise a jour. Renvoie `null` si la version n'existe pas.
+ */
+export async function getAdminCoursePreviewAction(
+  courseId: string,
+  version: PreviewVersion,
+): Promise<AdminCoursePreview | null> {
+  try {
+    return await adminGet<AdminCoursePreview>(
+      `/admin/courses/${encodeURIComponent(courseId)}/preview?version=${version}`,
+    );
   } catch (error) {
     if (error instanceof AdminApiError && error.status === 404) {
       return null;
@@ -185,11 +206,11 @@ export async function approveAdminCourseRevisionAction(
 export async function requestAdminCourseRevisionChangesAction(
   courseId: string,
   revisionId: string,
-  reason: string,
+  payload: ReviewDecisionPayload,
 ): Promise<AdminCourseSubmission> {
   const response = await adminMutation<CourseResponse>(
     `/admin/courses/${encodeURIComponent(courseId)}/revisions/${encodeURIComponent(revisionId)}/request-changes`,
-    { reason: reason.trim() },
+    payload,
   );
   return mapCourse(response.course);
 }
@@ -197,11 +218,11 @@ export async function requestAdminCourseRevisionChangesAction(
 export async function rejectAdminCourseRevisionAction(
   courseId: string,
   revisionId: string,
-  reason: string,
+  payload: ReviewDecisionPayload,
 ): Promise<AdminCourseSubmission> {
   const response = await adminMutation<CourseResponse>(
     `/admin/courses/${encodeURIComponent(courseId)}/revisions/${encodeURIComponent(revisionId)}/reject`,
-    { reason: reason.trim() },
+    payload,
   );
   return mapCourse(response.course);
 }
@@ -220,22 +241,22 @@ export async function approveAdminCourseAction(
 
 export async function rejectAdminCourseAction(
   id: string,
-  reason: string,
+  payload: ReviewDecisionPayload,
 ): Promise<AdminCourseSubmission> {
   const response = await adminMutation<CourseResponse>(
     `/admin/courses/${encodeURIComponent(id)}/reject`,
-    { reason: reason.trim() },
+    payload,
   );
   return mapCourse(response.course);
 }
 
 export async function requestAdminCourseChangesAction(
   id: string,
-  reason: string,
+  payload: ReviewDecisionPayload,
 ): Promise<AdminCourseSubmission> {
   const response = await adminMutation<CourseResponse>(
     `/admin/courses/${encodeURIComponent(id)}/request-changes`,
-    { reason: reason.trim() },
+    payload,
   );
   return mapCourse(response.course);
 }

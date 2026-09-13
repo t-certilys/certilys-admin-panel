@@ -13,6 +13,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { clearReviewCorrectionDrafts } from "@/lib/courses/use-review-corrections-draft";
 import { logoutAdminAction } from "@/lib/auth-actions";
 import { dashboardNavConfig, type DashboardNavGroup } from "../../lib/dashboard-nav-config";
 import { Logo } from "../certilys-ui/logo";
@@ -29,6 +30,7 @@ export function BottomDrawer({ open, onClose, navConfig = dashboardNavConfig }: 
 
   async function handleLogout() {
     onClose();
+    clearReviewCorrectionDrafts();
     await logoutAdminAction();
     router.replace("/auth/login");
     router.refresh();

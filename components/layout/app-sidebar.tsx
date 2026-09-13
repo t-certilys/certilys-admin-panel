@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useCommandPalette } from "@/components/providers/command-provider";
+import { clearReviewCorrectionDrafts } from "@/lib/courses/use-review-corrections-draft";
 import { logoutAdminAction } from "@/lib/auth-actions";
 import { dashboardNavConfig } from "../../lib/dashboard-nav-config";
 import type { DashboardNavGroup } from "../../lib/dashboard-nav-config";
@@ -53,6 +54,7 @@ export function AppSidebar({
 
   const isCollapsed = state === "collapsed";
   const handleLogout = React.useCallback(async () => {
+    clearReviewCorrectionDrafts();
     await logoutAdminAction();
     router.replace("/auth/login");
     router.refresh();
