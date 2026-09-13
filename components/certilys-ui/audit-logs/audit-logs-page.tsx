@@ -73,6 +73,22 @@ const ACTION_TRANSLATIONS: Record<string, { label: string; color: string }> = {
     label: "Modifications formation requises",
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
   },
+  COURSE_PUBLISHED: {
+    label: "Formation publiée",
+    color: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
+  },
+  COURSE_REVISION_APPROVED: {
+    label: "Mise à jour publiée",
+    color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+  },
+  COURSE_REVISION_CHANGES_REQUESTED: {
+    label: "Corrections de mise à jour requises",
+    color: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
+  },
+  COURSE_REVISION_REJECTED: {
+    label: "Mise à jour refusée",
+    color: "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400",
+  },
   ACCESS_REVOKED: {
     label: "Accès révoqué",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",

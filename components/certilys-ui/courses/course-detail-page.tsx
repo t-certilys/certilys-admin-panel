@@ -37,15 +37,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
 import { CoursePendingRevisionCard } from "@/components/certilys-ui/courses/course-pending-revision-card";
+import { CourseReviewHistoryCard } from "@/components/certilys-ui/courses/course-review-history-card";
+import { useReviewDecisionFlow } from "@/components/certilys-ui/courses/review/use-review-decision-flow";
 import {
-  approveAdminCourseAction,
   archiveAdminCourseAction,
   restoreAdminCourseAction,
   deleteAdminCourseAction,
   getAdminCourseWithRevisionAction,
-  rejectAdminCourseAction,
-  requestAdminCourseChangesAction,
+  type AdminCourseDraftRevision,
   type AdminCoursePendingRevision,
+  type AdminReviewFeedback,
 } from "@/lib/admin-courses-actions";
 
 import {
@@ -63,7 +64,8 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ActionType = "approve" | "request-changes" | "reject" | "archive" | "restore" | "delete";
+/** Actions de gestion. Les decisions d'examen passent par `useReviewDecisionFlow`. */
+type ActionType = "archive" | "restore" | "delete";
 
 interface ActionDialogState {
   open: boolean;
@@ -87,42 +89,6 @@ const ACTION_CONFIG: Record<
     icon: IconSvgElement;
   }
 > = {
-  approve: {
-    label: "Approuver la formation",
-    description:
-      "La formation sera marquée comme approuvée et pourra être publiée si le formateur est également approuvé. Cette action sera consignée dans les logs d'audit.",
-    confirmLabel: "Approuver",
-    requiresReason: false,
-    reasonLabel: "",
-    reasonPlaceholder: "",
-    variant: "default",
-    auditEvent: "COURSE_APPROVED",
-    icon: CheckmarkSquare01Icon,
-  },
-  "request-changes": {
-    label: "Demander des corrections",
-    description:
-      "Le formateur sera notifié et devra corriger la formation avant un nouvel examen.",
-    confirmLabel: "Envoyer la demande",
-    requiresReason: true,
-    reasonLabel: "Motif de la demande de correction",
-    reasonPlaceholder: "Décrivez précisément les corrections attendues…",
-    variant: "default",
-    auditEvent: "COURSE_CHANGES_REQUESTED",
-    icon: MessageLock01Icon,
-  },
-  reject: {
-    label: "Rejeter la formation",
-    description:
-      "La formation sera rejetée. Cette action est définitive et consignée dans les logs d'audit.",
-    confirmLabel: "Rejeter",
-    requiresReason: true,
-    reasonLabel: "Motif du rejet (obligatoire)",
-    reasonPlaceholder: "Expliquez la raison du rejet…",
-    variant: "destructive",
-    auditEvent: "COURSE_REJECTED",
-    icon: Cancel01Icon,
-  },
   archive: {
     label: "Masquer la formation",
     description:
@@ -160,24 +126,6 @@ const ACTION_CONFIG: Record<
     icon: Delete02Icon,
   },
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Simulation API
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function applyCourseDecision(
-  type: ActionType,
-  id: string,
-  reason?: string,
-): Promise<AdminCourseSubmission> {
-  if (type === "approve") {
-    return approveAdminCourseAction(id, reason);
-  }
-  if (type === "request-changes") {
-    return requestAdminCourseChangesAction(id, reason ?? "");
-  }
-  return rejectAdminCourseAction(id, reason ?? "");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -282,7 +230,21 @@ export default function CourseDetailPage() {
   const [loadError, setLoadError] = React.useState(false);
   const [pendingRevision, setPendingRevision] =
     React.useState<AdminCoursePendingRevision | null>(null);
+  const [draftRevision, setDraftRevision] =
+    React.useState<AdminCourseDraftRevision | null>(null);
+  const [reviewFeedbacks, setReviewFeedbacks] = React.useState<
+    AdminReviewFeedback[]
+  >([]);
   const [reloadToken, setReloadToken] = React.useState(0);
+  const {
+    openDecision,
+    dialog: reviewDialog,
+    draft: courseCorrections,
+  } = useReviewDecisionFlow({
+    courseId: id,
+    revisionId: null,
+    onDone: () => setReloadToken((token) => token + 1),
+  });
 
   React.useEffect(() => {
     let mounted = true;
@@ -295,6 +257,8 @@ export default function CourseDetailPage() {
         if (found) {
           setCourse(found.course);
           setPendingRevision(found.pendingRevision);
+          setDraftRevision(found.draftRevision);
+          setReviewFeedbacks(found.reviewFeedbacks);
         } else {
           setLoadError(true);
         }
@@ -319,10 +283,6 @@ export default function CourseDetailPage() {
   });
 
   function openAction(type: ActionType) {
-    if (
-      (type === "approve" || type === "request-changes" || type === "reject") &&
-      course?.status !== "SUBMITTED"
-    ) return;
     setDialog({ open: true, type, reason: "", loading: false, error: null });
   }
 
@@ -331,9 +291,8 @@ export default function CourseDetailPage() {
     setDialog((prev) => ({ ...prev, open: false }));
   }
 
-  async function handleConfirm(reasonOverride?: string) {
+  async function handleConfirm() {
     if (!dialog.type || !course) return;
-    const reason = reasonOverride ?? dialog.reason;
     setDialog((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -351,21 +310,9 @@ export default function CourseDetailPage() {
         return;
       }
 
-      if (dialog.type === "delete") {
-        await deleteAdminCourseAction(course.id);
-        setDialog((prev) => ({ ...prev, open: false, loading: false }));
-        router.replace("/dashboard/courses");
-        return;
-      }
-
-      const updatedCourse = await applyCourseDecision(
-        dialog.type,
-        course.id,
-        reason,
-      );
-      setCourse(updatedCourse);
-
+      await deleteAdminCourseAction(course.id);
       setDialog((prev) => ({ ...prev, open: false, loading: false }));
+      router.replace("/dashboard/courses");
     } catch (err) {
       setDialog((prev) => ({
         ...prev,
@@ -486,7 +433,7 @@ export default function CourseDetailPage() {
     0,
   );
 
-  const dialogCfg = ACTION_CONFIG[dialog.type ?? "approve"];
+  const dialogCfg = ACTION_CONFIG[dialog.type ?? "archive"];
 
   return (
     <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
@@ -515,6 +462,21 @@ export default function CourseDetailPage() {
 
         {/* Boutons décisionnels */}
         <div className="flex items-center gap-2 flex-wrap">
+          <Button asChild variant="secondary" size="sm" className="gap-2">
+            <Link
+              href={`/dashboard/courses/${course.id}/preview`}
+              id="btn-detail-learner-preview"
+            >
+              <HugeiconsIcon
+                icon={EyeIcon}
+                className="size-4"
+                size={16}
+                strokeWidth={1.5}
+              />
+              Voir comme un apprenant
+            </Link>
+          </Button>
+
           <Button
             id="btn-detail-approve-course"
             variant="outline"
@@ -524,7 +486,7 @@ export default function CourseDetailPage() {
             }`}
             onClick={() => {
               if (isCriticalMissing || !isReviewable) return;
-              openAction("approve");
+              openDecision("approve");
             }}
             disabled={isCriticalMissing || !isReviewable}
           >
@@ -542,7 +504,7 @@ export default function CourseDetailPage() {
             variant="outline"
             size="sm"
             className="gap-2 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
-            onClick={() => openAction("request-changes")}
+            onClick={() => openDecision("request-changes")}
             disabled={!isReviewable}
           >
             <HugeiconsIcon
@@ -552,6 +514,11 @@ export default function CourseDetailPage() {
               strokeWidth={1.5}
             />
             Corrections
+            {courseCorrections.items.length > 0 ? (
+              <Badge className="ml-0.5 h-5 min-w-5 px-1.5 text-[11px]">
+                {courseCorrections.items.length}
+              </Badge>
+            ) : null}
           </Button>
 
           <Button
@@ -559,7 +526,7 @@ export default function CourseDetailPage() {
             variant="outline"
             size="sm"
             className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
-            onClick={() => openAction("reject")}
+            onClick={() => openDecision("reject")}
             disabled={!isReviewable}
           >
             <HugeiconsIcon
@@ -664,6 +631,25 @@ export default function CourseDetailPage() {
         />
       ) : null}
 
+      {draftRevision ? (
+        <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
+          <HugeiconsIcon
+            icon={AlertCircleIcon}
+            className="size-5 shrink-0 mt-0.5 text-muted-foreground"
+            size={20}
+            strokeWidth={1.5}
+          />
+          <span className="text-muted-foreground">
+            {draftRevision.status === "CHANGES_REQUESTED"
+              ? "Le formateur corrige sa mise à jour suite à vos remarques. Elle reviendra ici quand il la renverra."
+              : "Le formateur prépare une mise à jour de cette formation. Rien n’est à examiner tant qu’il ne l’a pas envoyée."}{" "}
+            Dernier enregistrement le {formatDate(draftRevision.updatedAt)}.
+          </span>
+        </div>
+      ) : null}
+
+      <CourseReviewHistoryCard feedbacks={reviewFeedbacks} />
+
       {/* ══════════════════════════════════════════════════════════════════════
           1. RÉSUMÉ
           ══════════════════════════════════════════════════════════════════════ */}
@@ -698,7 +684,7 @@ export default function CourseDetailPage() {
                 Slug SEO
               </span>
               <span className="font-mono text-xs text-foreground bg-muted/60 rounded px-1.5 py-0.5 w-fit">
-                {course.slug || "—"}
+                {course.slug || "Non renseigné"}
               </span>
             </div>
 
@@ -740,7 +726,7 @@ export default function CourseDetailPage() {
                 Catégorie
               </span>
               <span className="text-sm text-foreground">
-                {course.category || "—"}
+                {course.category || "Non renseignée"}
               </span>
             </div>
 
@@ -767,7 +753,7 @@ export default function CourseDetailPage() {
                   strokeWidth={1.5}
                 />
                 <span className="text-sm text-foreground">
-                  {course.language || "—"}
+                  {course.language || "Non renseignée"}
                 </span>
               </div>
             </div>
@@ -1351,7 +1337,7 @@ export default function CourseDetailPage() {
           tone={
             dialogCfg.variant === "destructive"
               ? "danger"
-              : dialog.type === "approve" || dialog.type === "restore"
+              : dialog.type === "restore"
                 ? "success"
                 : "info"
           }
@@ -1364,14 +1350,14 @@ export default function CourseDetailPage() {
           requireReason={dialogCfg.requiresReason}
           reasonLabel={dialogCfg.reasonLabel}
           reasonPlaceholder={dialogCfg.reasonPlaceholder}
-          minReasonLength={10}
           confirmLabel={dialogCfg.confirmLabel}
           cancelLabel="Annuler"
           loading={dialog.loading}
           error={dialog.error}
-          onConfirm={({ reason }) => handleConfirm(reason)}
+          onConfirm={() => handleConfirm()}
         />
       ) : null}
+      {reviewDialog}
     </div>
   );
 }

@@ -47,6 +47,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DecisionDialog } from "@/components/certilys-ui/dialogs";
+import { REVIEW_REASON_MIN_LENGTH } from "@/lib/courses/course-review-decision.schema";
 import { downloadCsvForExcel } from "@/lib/csv-export";
 import {
   approveAdminCourseAction,
@@ -101,7 +102,7 @@ const ACTION_CONFIG: Record<
   approve: {
     label: "Approuver la formation",
     description:
-      "La formation sera marquée comme approuvée et pourra être publiée si le formateur est également approuvé. Cette action sera consignée dans les logs d'audit.",
+      "La formation sera mise en ligne immédiatement : elle apparaîtra au catalogue et pourra être achetée. Cette action sera consignée dans les logs d'audit.",
     confirmLabel: "Approuver",
     requiresReason: false,
     reasonLabel: "",
@@ -148,10 +149,11 @@ async function applyCourseDecision(
   if (type === "approve") {
     return approveAdminCourseAction(id, reason);
   }
+  const payload = { reason: reason?.trim() ?? "", items: [] };
   if (type === "request-changes") {
-    return requestAdminCourseChangesAction(id, reason ?? "");
+    return requestAdminCourseChangesAction(id, payload);
   }
-  return rejectAdminCourseAction(id, reason ?? "");
+  return rejectAdminCourseAction(id, payload);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +299,7 @@ function ActionDialog({
       requireReason={cfg.requiresReason}
       reasonLabel={cfg.reasonLabel}
       reasonPlaceholder={cfg.reasonPlaceholder}
-      minReasonLength={10}
+      minReasonLength={REVIEW_REASON_MIN_LENGTH}
       confirmLabel={cfg.confirmLabel}
       cancelLabel="Annuler"
       loading={state.loading}
