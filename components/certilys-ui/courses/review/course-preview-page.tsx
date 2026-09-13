@@ -185,10 +185,16 @@ export function CoursePreviewPage() {
     : courseStatus === "SUBMITTED";
 
   const allLessons = preview.modules.flatMap((item) => item.lessons);
+  // La selection suit le programme affiche : avec le filtre des changements,
+  // une lecon inchangee ne doit plus occuper le panneau principal.
+  const visibleLessons =
+    isRevision && onlyChanges
+      ? filterChangedModules(preview.modules).flatMap((item) => item.lessons)
+      : allLessons;
   const selectedLesson =
-    allLessons.find((lesson) => lesson.id === lessonParam) ??
-    (isRevision ? allLessons.find((lesson) => lesson.change) : undefined) ??
-    allLessons[0] ??
+    visibleLessons.find((lesson) => lesson.id === lessonParam) ??
+    (isRevision ? visibleLessons.find((lesson) => lesson.change) : undefined) ??
+    visibleLessons[0] ??
     null;
   const selectedModule = selectedLesson
     ? preview.modules.find((item) =>
@@ -276,7 +282,10 @@ export function CoursePreviewPage() {
               variant="outline"
               size="sm"
               pressed={onlyChanges}
-              onPressedChange={(pressed) => void setOnlyChanges(pressed || null)}
+              onPressedChange={(pressed) => {
+                void setLessonParam(null);
+                void setOnlyChanges(pressed || null);
+              }}
               className={cn("px-3", ACTIVE_TOGGLE)}
             >
               <HugeiconsIcon icon={FilterIcon} className="size-4" size={16} strokeWidth={1.5} />
@@ -851,6 +860,22 @@ function CourseSheetCard({ preview }: { preview: AdminCoursePreview }) {
   );
 }
 
+/** Modules et lecons modifies ; un module ajoute ou retire reste entier. */
+function filterChangedModules(modules: PreviewModule[]): PreviewModule[] {
+  return modules
+    .map((courseModule) =>
+      courseModule.change === "ADDED" || courseModule.change === "REMOVED"
+        ? courseModule
+        : {
+            ...courseModule,
+            lessons: courseModule.lessons.filter((lesson) => lesson.change),
+          },
+    )
+    .filter(
+      (courseModule) => courseModule.change || courseModule.lessons.length > 0,
+    );
+}
+
 function ProgramPanel({
   modules,
   isRevision,
@@ -873,20 +898,7 @@ function ProgramPanel({
   const correctionCount = (id: string) =>
     corrections.filter((item) => item.targetId === id).length;
 
-  const visibleModules = modules
-    .map((courseModule) => {
-      if (!onlyChanges || courseModule.change === "ADDED" || courseModule.change === "REMOVED") {
-        return courseModule;
-      }
-      return {
-        ...courseModule,
-        lessons: courseModule.lessons.filter((lesson) => lesson.change),
-      };
-    })
-    .filter(
-      (courseModule) =>
-        !onlyChanges || courseModule.change || courseModule.lessons.length > 0,
-    );
+  const visibleModules = onlyChanges ? filterChangedModules(modules) : modules;
 
   return (
     <aside className="rounded-xl border border-border/60 bg-card lg:sticky lg:top-20">

@@ -4,8 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const BACKEND_URL =
   process.env.CERTILYS_BACKEND_URL ?? "http://localhost:4000";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_ID_LENGTH = 160;
 
 type AssetDownloadResponse = { url: string; expiresAt: string | null };
 
@@ -24,7 +23,13 @@ export async function GET(
       ? "revision"
       : "live";
 
-  if (!UUID_PATTERN.test(id) || !assetId || assetId.length > 160) {
+  // Identifiants opaques : le backend verifie qu'ils existent et vont ensemble.
+  if (
+    !id ||
+    id.length > MAX_ID_LENGTH ||
+    !assetId ||
+    assetId.length > MAX_ID_LENGTH
+  ) {
     return NextResponse.json(
       { message: "Ressource introuvable." },
       { status: 404 },
@@ -62,7 +67,7 @@ export async function GET(
       { status: 502 },
     );
   }
-  if (target.protocol !== "https:" && target.hostname !== "localhost") {
+  if (!isAllowedRedirect(target)) {
     return NextResponse.json(
       { message: "La ressource n’a pas pu être ouverte." },
       { status: 502 },
@@ -72,6 +77,12 @@ export async function GET(
   const redirect = NextResponse.redirect(target, 302);
   redirect.headers.set("Cache-Control", "private, no-store");
   return redirect;
+}
+
+/** HTTPS uniquement, sauf le stockage local de developpement en HTTP. */
+function isAllowedRedirect(target: URL) {
+  if (target.protocol === "https:") return true;
+  return target.protocol === "http:" && target.hostname === "localhost";
 }
 
 async function currentCookieHeader() {

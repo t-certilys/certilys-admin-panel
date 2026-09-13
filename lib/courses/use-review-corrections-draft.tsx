@@ -13,6 +13,10 @@ import type { ReviewCorrectionDraft } from "./course-review.types";
  * partagees entre les pages et conservees pour l'onglet (sessionStorage) en
  * cas de rechargement. Il s'agit d'un contenu nouveau, jamais d'une valeur
  * deja enregistree : aucune confusion possible avec l'etat du backend.
+ *
+ * Le brouillon appartient a l'administrateur connecte : la cle porte son
+ * identifiant et la deconnexion efface tout, pour qu'un autre compte ouvert
+ * dans le meme onglet ne voie ni n'envoie les corrections du precedent.
  */
 
 type Listener = () => void;
@@ -21,8 +25,46 @@ const EMPTY: ReviewCorrectionDraft[] = [];
 const cache = new Map<string, ReviewCorrectionDraft[]>();
 const listeners = new Map<string, Set<Listener>>();
 
+const STORAGE_PREFIX = "certilys:review-corrections:";
+
 function storageKey(key: string) {
-  return `certilys:review-corrections:${key}`;
+  return `${STORAGE_PREFIX}${key}`;
+}
+
+const ReviewDraftOwnerContext = React.createContext<string | null>(null);
+
+/** Rattache les brouillons de corrections a l'administrateur connecte. */
+export function ReviewDraftOwnerProvider({
+  adminId,
+  children,
+}: {
+  adminId: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <ReviewDraftOwnerContext.Provider value={adminId}>
+      {children}
+    </ReviewDraftOwnerContext.Provider>
+  );
+}
+
+/** Efface les corrections preparees de tous les dossiers, a la deconnexion. */
+export function clearReviewCorrectionDrafts() {
+  try {
+    const keys: string[] = [];
+    for (let index = 0; index < window.sessionStorage.length; index += 1) {
+      const key = window.sessionStorage.key(index);
+      if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+    // Stockage indisponible : seul le cache memoire est a vider.
+  }
+  const touched = [...cache.keys()];
+  cache.clear();
+  touched.forEach((key) =>
+    listeners.get(key)?.forEach((listener) => listener()),
+  );
 }
 
 function read(key: string): ReviewCorrectionDraft[] {
@@ -78,7 +120,8 @@ export function useReviewCorrectionsDraft(
   courseId: string,
   revisionId: string | null,
 ) {
-  const key = `${courseId}:${revisionId ?? "course"}`;
+  const owner = React.useContext(ReviewDraftOwnerContext) ?? "anonymous";
+  const key = `${owner}:${courseId}:${revisionId ?? "course"}`;
 
   const items = React.useSyncExternalStore(
     React.useCallback((listener) => subscribe(key, listener), [key]),

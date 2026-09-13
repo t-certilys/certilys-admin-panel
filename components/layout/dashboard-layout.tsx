@@ -9,9 +9,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { BottomDrawer } from "./bottom-drawer";
 import { BottomNav } from "./bottom-nav";
-import { dashboardNavConfig, type DashboardNavGroup } from "@/lib/dashboard-nav-config";
+import {
+  dashboardNavConfig,
+  type DashboardNavGroup,
+} from "@/lib/dashboard-nav-config";
+import { ReviewDraftOwnerProvider } from "@/lib/courses/use-review-corrections-draft";
 
 type DashboardUser = {
+  id?: string;
   displayName?: string | null;
   email: string;
   avatarUrl?: string | null;
@@ -36,30 +41,35 @@ export function DashboardLayout({
   };
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "15rem",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as CSSProperties
-        }
-        className="h-svh overflow-hidden"
-      >
-        <AppSidebar navConfig={navConfig} user={sidebarUser} />
-        <SidebarInset className="h-svh overflow-y-auto rounded-none shadow-none">
-          <SiteHeader />
-          <main className="flex flex-1 flex-col overflow-x-hidden pb-20 md:pb-0">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-      <BottomNav onMoreClick={() => setIsDrawerOpen(true)} navConfig={navConfig} />
-      <BottomDrawer
-        open={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        navConfig={navConfig}
-      />
-    </TooltipProvider>
+    <ReviewDraftOwnerProvider adminId={user?.id ?? null}>
+      <TooltipProvider>
+        <SidebarProvider
+          style={
+            {
+              "--sidebar-width": "15rem",
+              "--header-height": "calc(var(--spacing) * 12)",
+            } as CSSProperties
+          }
+          className="h-svh overflow-hidden"
+        >
+          <AppSidebar navConfig={navConfig} user={sidebarUser} />
+          <SidebarInset className="h-svh overflow-y-auto rounded-none shadow-none">
+            <SiteHeader />
+            <main className="flex flex-1 flex-col overflow-x-hidden pb-20 md:pb-0">
+              {children}
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+        <BottomNav
+          onMoreClick={() => setIsDrawerOpen(true)}
+          navConfig={navConfig}
+        />
+        <BottomDrawer
+          open={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          navConfig={navConfig}
+        />
+      </TooltipProvider>
+    </ReviewDraftOwnerProvider>
   );
 }
