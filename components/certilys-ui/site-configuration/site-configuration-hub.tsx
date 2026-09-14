@@ -6,7 +6,6 @@ import {
   ArrowRight01Icon,
   Coins01Icon,
   Home01Icon,
-  PlusSignIcon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,6 +13,7 @@ import { useQueryState } from "nuqs";
 
 import { LeonoCreditPacksDialog } from "@/components/certilys-ui/orders/leono-credit-packs-dialog";
 import { SiteConfigurationPage } from "@/components/certilys-ui/site-configuration/site-configuration-page";
+import { TesterManagementPage } from "@/components/certilys-ui/site-configuration/tester-management-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -34,7 +34,13 @@ export function SiteConfigurationHub() {
   const [leonoOpen, setLeonoOpen] = React.useState(false);
 
   const activeTab =
-    tab === "landing" || tab === "referentiels" ? tab : "home";
+    tab === "landing" || tab === "referentiels" || tab === "testers"
+      ? tab
+      : "home";
+
+  if (activeTab === "testers") {
+    return <TesterManagementPage onBack={() => void setTab("home")} />;
+  }
 
   if (activeTab !== "home") {
     return (
@@ -92,11 +98,10 @@ export function SiteConfigurationHub() {
           />
 
           <ConfigurationCard
-            title="À venir"
-            description="De nouvelles options de configuration seront ajoutées ici au fil de l’évolution de Certilys."
-            icon={PlusSignIcon}
-            disabled
-            badge="Bientôt"
+            title="Comptes testeurs"
+            description="Désignez les apprenants autorisés à explorer les formations masquées du catalogue."
+            icon={UserGroupIcon}
+            onClick={() => void setTab("testers")}
           />
         </div>
       </div>
