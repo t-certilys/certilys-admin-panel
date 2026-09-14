@@ -22,6 +22,7 @@ type BackendInstructorApplication = {
   applicationNotes?: string | null;
   verificationPayload?: VerificationPayload | null;
   publishedCoursesCount?: number;
+  isHiddenFromCatalog?: boolean;
   submittedCoursesCount?: number;
   documentAccess?: { endpoint: string; expiresInSeconds: number } | null;
   documentAccesses?: Array<{
@@ -109,6 +110,17 @@ export async function deleteInstructorAccountAction(id: string): Promise<void> {
   await adminDelete<{ status: "USER_DELETED"; userId: string }>(
     `/admin/instructor-applications/${encodeURIComponent(id)}/account`,
   );
+}
+
+export async function setInstructorCatalogVisibilityAction(
+  id: string,
+  hidden: boolean,
+): Promise<InstructorApplication> {
+  const response = await adminMutation<ApplicationResponse>(
+    `/admin/instructor-applications/${encodeURIComponent(id)}/catalog-visibility`,
+    { hidden },
+  );
+  return mapApplication(response.application);
 }
 
 function mapApplication(

@@ -69,6 +69,38 @@ export async function reactivateAdminUserAction(id: string): Promise<AdminUser> 
   return response.user;
 }
 
+export async function designateTesterAction(id: string): Promise<AdminUser> {
+  const response = await adminMutation<AdminUserResponse>(
+    `/admin/users/${encodeURIComponent(id)}/tester`,
+  );
+  return response.user;
+}
+
+export async function revokeTesterAction(id: string): Promise<AdminUser> {
+  const response = await adminDelete<AdminUserResponse>(
+    `/admin/users/${encodeURIComponent(id)}/tester`,
+  );
+  return response.user;
+}
+
+export async function grantCourseToUserAction(
+  userId: string,
+  courseId: string,
+): Promise<{ access: { id: string; userId: string; courseId: string; status: string } }> {
+  return adminMutation(`/admin/users/${encodeURIComponent(userId)}/course-grants`, {
+    courseId,
+  });
+}
+
+export async function revokeCourseGrantAction(
+  userId: string,
+  courseId: string,
+): Promise<void> {
+  await adminDelete(
+    `/admin/users/${encodeURIComponent(userId)}/course-grants/${encodeURIComponent(courseId)}`,
+  );
+}
+
 export async function disableAdminUserTwoFactorAction(
   id: string,
   reason: string,

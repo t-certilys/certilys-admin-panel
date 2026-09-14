@@ -86,6 +86,7 @@ export interface AdminUser {
   avatarUrl?: string | null;
   avatarColor: string;
   role: UserRole;
+  isTester?: boolean;
   status: AccountStatus;
   country: string;
   timezone: string;

@@ -730,7 +730,14 @@ export default function UsersPage() {
 
                     {/* Rôle */}
                     <TableCell>
-                      <RoleBadge role={user.role} />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <RoleBadge role={user.role} />
+                        {user.isTester ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            Testeur
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
 
                     {/* Statut */}
