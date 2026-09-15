@@ -45,14 +45,17 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
     error: null,
   });
 
-  const loadLearners = React.useCallback(async () => {
+  const loadTesterAccounts = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getAdminUsersAction({ role: "LEARNER" });
-      setUsers(response.users);
+      const [learners, instructors] = await Promise.all([
+        getAdminUsersAction({ role: "LEARNER" }),
+        getAdminUsersAction({ role: "INSTRUCTOR" }),
+      ]);
+      setUsers([...learners.users, ...instructors.users]);
     } catch {
-      setError("Impossible de charger les apprenants.");
+      setError("Impossible de charger les comptes apprenants et formateurs.");
     } finally {
       setLoading(false);
     }
@@ -60,10 +63,10 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void loadLearners();
+      void loadTesterAccounts();
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [loadLearners]);
+  }, [loadTesterAccounts]);
 
   const filteredUsers = users.filter((user) => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -97,7 +100,7 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
       );
       toast.success(
         dialog.action === "designate"
-          ? "Apprenant désigné comme testeur."
+          ? "Compte désigné comme testeur."
           : "Statut testeur retiré.",
       );
       closeDialog(false);
@@ -130,7 +133,7 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
               Comptes testeurs
             </h1>
             <p className="text-sm text-muted-foreground">
-              Désignez les apprenants qui peuvent explorer les formations masquées du catalogue.
+              Désignez les apprenants et formateurs qui peuvent explorer les formations masquées du catalogue.
             </p>
           </div>
         </div>
@@ -139,7 +142,7 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
       <Card>
         <CardHeader className="gap-4 border-b border-border/60 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-lg">Apprenants</CardTitle>
+            <CardTitle className="text-lg">Comptes apprenants et formateurs</CardTitle>
             <CardDescription>
               {users.filter((user) => user.isTester).length} testeur(s) désigné(s)
             </CardDescription>
@@ -152,8 +155,8 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Rechercher un apprenant"
-              aria-label="Rechercher un apprenant"
+              placeholder="Rechercher un compte"
+              aria-label="Rechercher un compte"
               className="pl-9"
             />
           </div>
@@ -167,13 +170,13 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
           ) : error ? (
             <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
               <p className="text-sm text-destructive">{error}</p>
-              <Button type="button" variant="outline" onClick={() => void loadLearners()}>
+              <Button type="button" variant="outline" onClick={() => void loadTesterAccounts()}>
                 Réessayer
               </Button>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="px-6 py-14 text-center text-sm text-muted-foreground">
-              Aucun apprenant ne correspond à cette recherche.
+              Aucun compte apprenant ou formateur ne correspond à cette recherche.
             </div>
           ) : (
             <div className="divide-y divide-border/60">
@@ -196,7 +199,9 @@ export function TesterManagementPage({ onBack }: { onBack: () => void }) {
                         Testeur
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Apprenant</Badge>
+                      <Badge variant="outline">
+                        {user.role === "INSTRUCTOR" ? "Formateur" : "Apprenant"}
+                      </Badge>
                     )}
                     <Button
                       type="button"
